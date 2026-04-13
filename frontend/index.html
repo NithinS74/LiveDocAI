@@ -1,0 +1,1820 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiveDoc AI - Documentation that lives.</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode:'class',
+            theme:{extend:{
+                fontFamily:{sans:['Inter','sans-serif'],mono:['Fira Code','monospace']},
+                colors:{background:'#0b0b0f',surface:'#12121a',surfaceHover:'#1a1a24',border:'#232333',primary:'#3b82f6',primaryHover:'#2563eb',accent:'#8b5cf6'},
+                animation:{'float':'float 6s ease-in-out infinite','pulse-glow':'pulse-glow 2s cubic-bezier(0.4,0,0.6,1) infinite','slide-in':'slide-in 0.3s ease-out forwards','fade-in':'fade-in 0.4s ease-out forwards','count-up':'count-up 0.8s ease-out forwards'},
+                keyframes:{
+                    float:{'0%,100%':{transform:'translateY(0)'},'50%':{transform:'translateY(-20px)'}},
+                    'pulse-glow':{'0%,100%':{opacity:1,boxShadow:'0 0 20px rgba(139,92,246,0.4)'},'50%':{opacity:.7,boxShadow:'0 0 40px rgba(59,130,246,0.6)'}},
+                    'slide-in':{'0%':{opacity:0,transform:'translateY(10px)'},'100%':{opacity:1,transform:'translateY(0)'}},
+                    'fade-in':{'0%':{opacity:0},'100%':{opacity:1}},
+                }
+            }}
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Alpine MUST come last so chart.js and lucide are ready when alpine:init fires -->
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <style>
+        body{background-color:#0b0b0f;color:#e2e8f0;}
+        /* Light mode overrides */
+        html:not(.dark) body { background-color:#f1f5f9; color:#1e293b; }
+        html:not(.dark) .glass { background:rgba(255,255,255,0.8); border-color:rgba(0,0,0,0.1); }
+        html:not(.dark) .glass-card { background:linear-gradient(180deg,rgba(255,255,255,0.9) 0%,rgba(241,245,249,0.95) 100%); border-color:rgba(0,0,0,0.08); }
+        html:not(.dark) .bg-surface, html:not(.dark) [class*="bg-\[#12121a\]"], html:not(.dark) [class*="bg-\[#0b0b0f\]"] { background-color:#f8fafc !important; }
+        html:not(.dark) .border-border { border-color:#e2e8f0; }
+        html:not(.dark) .text-white { color:#1e293b !important; }
+        html:not(.dark) .text-gray-300 { color:#475569 !important; }
+        html:not(.dark) .text-gray-400 { color:#64748b !important; }
+        html:not(.dark) .text-gray-500 { color:#94a3b8 !important; }
+        html:not(.dark) .text-gray-600 { color:#94a3b8 !important; }
+        html:not(.dark) aside { background-color:#f8fafc !important; border-color:#e2e8f0 !important; }
+        html:not(.dark) header { background-color:rgba(248,250,252,0.9) !important; border-color:#e2e8f0 !important; }
+        html:not(.dark) .code-block { background:#f1f5f9; border-color:#e2e8f0; }
+        html:not(.dark) .bg-\[\#0d0d12\] { background-color:#f1f5f9 !important; }
+        html:not(.dark) .bg-\[\#24292e\] { background-color:#24292e !important; }
+        ::-webkit-scrollbar{width:8px;height:8px;}
+        ::-webkit-scrollbar-track{background:#0b0b0f;}
+        ::-webkit-scrollbar-thumb{background:#232333;border-radius:4px;}
+        ::-webkit-scrollbar-thumb:hover{background:#3b82f6;}
+        .glass{background:rgba(18,18,26,0.7);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.08);}
+        .glass-card{background:linear-gradient(180deg,rgba(30,30,40,0.6) 0%,rgba(18,18,26,0.8) 100%);border:1px solid rgba(255,255,255,0.05);box-shadow:0 4px 30px rgba(0,0,0,0.5);backdrop-filter:blur(10px);}
+        .gradient-text{background:linear-gradient(to right,#60a5fa,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+        .glow-border{position:relative;}
+        .glow-border::before{content:"";position:absolute;inset:-1px;border-radius:inherit;padding:1px;background:linear-gradient(45deg,#3b82f6,#8b5cf6,#3b82f6);-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:0.5;pointer-events:none;}
+        .code-block{background:#0d0d12;border:1px solid #1f1f2e;}
+        [x-cloak]{display:none !important;}
+        /* Skeleton shimmer */
+        .skeleton{background:linear-gradient(90deg,#1a1a24 25%,#232333 50%,#1a1a24 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;}
+        @keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+        /* Toast */
+        .toast{position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;transform:translateY(100px);opacity:0;transition:all 0.3s ease;}
+        .toast.show{transform:translateY(0);opacity:1;}
+        /* Tab transition */
+        .tab-content{animation:fade-in 0.2s ease-out;}
+        @keyframes fade-in{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+        /* Modal */
+        .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:100;backdrop-filter:blur(4px);}
+    </style>
+
+    <script>
+    // Auto-detect API URL — localhost for dev, Railway URL for production
+    const IS_LOCAL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const API = IS_LOCAL
+        ? 'http://localhost:8000'
+        : 'https://livedocai-production.up.railway.app';  // ← UPDATE THIS after Railway deploy
+
+    // ── Counter animation helper ──────────────────────────────
+    function animateCount(el, target, duration=800) {
+        const start = 0;
+        const step = target / (duration / 16);
+        let current = start;
+        const timer = setInterval(() => {
+            current = Math.min(current + step, target);
+            el.textContent = current >= 1000 ? (current/1000).toFixed(1)+'K' : Math.floor(current).toString();
+            if (current >= target) clearInterval(timer);
+        }, 16);
+    }
+
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('appData', () => ({
+
+            currentPage: 'landing',
+            authTab: 'signin',
+            dashTab: 'main',
+
+            // Auth
+            userForm: { name:'', org:'', email:'', password:'' },
+            currentUser: { name:'Admin User', org:'Acme Corp', email:'' },
+            authError: '',
+            authLoading: false,
+            keepSignedIn: true,
+
+            // Landing
+            landingLogs: [
+                { text:'Monitoring traffic on <span class="text-blue-400">api.production.com</span>', time:'10:01:23' },
+                { text:'Detected new endpoint: <span class="text-orange-400">POST /v2/billing</span>', time:'10:01:45' },
+                { text:'Analyzing payload structure...', time:'10:01:46' },
+                { text:'Schema generated. Opening PR #142 to docs repo.', time:'10:01:50' }
+            ],
+            metrics: { requests: 142058 },
+
+            // Dashboard data
+            stats: { total_requests_24h:0, total_endpoints:0, endpoints_with_drift:0, avg_error_rate:0, top_endpoints:[] },
+            endpoints: [],
+            logs: [],
+            driftEndpoints: [],
+            selectedEndpoint: null,
+            docsViewMode: 'api',
+            agentEvents: [],
+            loading: { stats:true, endpoints:true, logs:true },
+            searchQuery: '',
+            logFilter: 'all',
+            apiOnline: false,
+            _polling: false,
+
+            // GitHub integration state
+            github: {
+                connected: false,
+                repoUrl: '',
+                token: '',
+                repoInfo: null,
+                commits: [],
+                connecting: false,
+                error: '',
+                docTarget: 'new',
+                customDocPath: '',
+                generating: false,
+                generatedDoc: '',
+                prUrl: '',
+                prError: '',
+                // Dashboard stats from backend
+                dashboard: { total_prs_opened:0, repos_connected:0, drift_events:0, repos:[], recent_activity:[] },
+                history: [],
+                loadingDashboard: false,
+            },
+            darkMode: false,
+
+            // UI state
+            toast: { show:false, message:'', type:'success' },
+            logModal: { show:false, log:null },
+
+            usageChartInstance: null,
+            errorChartInstance: null,
+            _chartTimer: null,
+
+            // ══════════════════════════════════════════════════
+            init() {
+                this.$watch('currentPage', (val) => {
+                    this.refreshIcons();
+                    if (val === 'dashboard') {
+                        this.$nextTick(() => this.initCharts());
+                        this.fetchAll();
+                        this.fetchGithubDashboard();
+                        // Auto-reconnect GitHub repo if previously connected
+                        const savedGh = localStorage.getItem('livedocai_github');
+                        if (savedGh) {
+                            try {
+                                const gh = JSON.parse(savedGh);
+                                if (gh && gh.connected && gh.repoUrl) {
+                                    this.github.repoUrl = gh.repoUrl;
+                                    // Re-fetch repo info silently
+                                    this.$nextTick(() => this.connectGithub());
+                                }
+                            } catch(e) {}
+                        }
+                    }
+                });
+                this.$watch('dashTab', (val) => {
+                    this.refreshIcons();
+                    if (val === 'main') this.$nextTick(() => this.initCharts());
+                    if (val === 'logs') this.fetchLogs();
+                    if (val === 'github') this.fetchGithubDashboard();
+                });
+
+                setInterval(() => { this.metrics.requests += Math.floor(Math.random() * 5); }, 2000);
+
+                // Dark/light mode
+                const savedTheme = localStorage.getItem('livedocai_theme');
+                if (savedTheme === 'light') {
+                    this.darkMode = false;
+                    document.documentElement.classList.remove('dark');
+                } else {
+                    this.darkMode = true;
+                    document.documentElement.classList.add('dark');
+                }
+
+                // Restore GitHub connection if previously connected
+                const savedGh = localStorage.getItem('livedocai_github');
+                if (savedGh) {
+                    try {
+                        const gh = JSON.parse(savedGh);
+                        if (gh && gh.connected && gh.repoUrl) {
+                            this.github.repoUrl = gh.repoUrl;
+                            // Restore token from session storage (never persisted to localStorage)
+                            const savedToken = sessionStorage.getItem('livedocai_github_token');
+                            if (savedToken) this.github.token = savedToken;
+                        }
+                    } catch(e) {}
+                }
+
+                const saved = localStorage.getItem('livedocai_user') || sessionStorage.getItem('livedocai_user');
+                if (saved) {
+                    try {
+                        const u = JSON.parse(saved);
+                        if (u && u.email && u.name) {
+                            this.currentUser = u;
+                        } else {
+                            localStorage.removeItem('livedocai_user');
+                            sessionStorage.removeItem('livedocai_user');
+                        }
+                    } catch(e) {
+                        localStorage.removeItem('livedocai_user');
+                        sessionStorage.removeItem('livedocai_user');
+                    }
+                }
+                this.refreshIcons();
+            },
+
+            navigate(page, tab=null) {
+                this.currentPage = page;
+                if (tab) this.authTab = tab;
+                window.scrollTo(0,0);
+                this.authError = '';
+            },
+
+            // ── AUTH ───────────────────────────────────────────
+            async login() {
+                this.authError = '';
+                this.authLoading = true;
+                try {
+                    const ep = this.authTab === 'signup' ? '/api/auth/signup' : '/api/auth/signin';
+                    const body = this.authTab === 'signup'
+                        ? { name:this.userForm.name, org:this.userForm.org, email:this.userForm.email, password:this.userForm.password }
+                        : { email:this.userForm.email, password:this.userForm.password };
+                    const res = await fetch(API+ep, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+                    const data = await res.json();
+                    if (!res.ok) { this.authError = data.detail || 'Something went wrong'; return; }
+                    this.currentUser = { name:data.name, org:data.org, email:data.email, token:data.token, api_key:data.api_key||'', user_id:data.user_id||'' };
+                    if (this.keepSignedIn) {
+                        localStorage.setItem('livedocai_user', JSON.stringify(this.currentUser));
+                    } else {
+                        sessionStorage.setItem('livedocai_user', JSON.stringify(this.currentUser));
+                        localStorage.removeItem('livedocai_user');
+                    }
+                    this.userForm = { name:'', org:'', email:'', password:'' };
+                    this.navigate('dashboard');
+                } catch(e) {
+                    this.authError = 'Cannot connect to backend. Make sure server is running on localhost:8000.';
+                } finally { this.authLoading = false; }
+            },
+
+            logout() {
+                localStorage.removeItem('livedocai_user');
+                sessionStorage.removeItem('livedocai_user');
+                sessionStorage.removeItem('livedocai_github_token');
+                this.currentUser = { name:'Admin User', org:'Acme Corp' };
+                this.github = { connected:false, repoUrl:'', token:'', repoInfo:null, commits:[], connecting:false, error:'', docTarget:'new', customDocPath:'', generating:false, generatedDoc:'', prUrl:'', prError:'', dashboard:{ total_prs_opened:0, repos_connected:0, drift_events:0, repos:[], recent_activity:[] }, history:[], loadingDashboard:false };
+                this.navigate('landing');
+            },
+
+            // ── FETCH ──────────────────────────────────────────
+            async fetchAll() {
+                await Promise.all([this.fetchStats(), this.fetchEndpoints(), this.fetchLogs(), this.fetchDrift()]);
+                this.refreshIcons();
+                if (!this._polling) {
+                    this._polling = true;
+                    setInterval(() => { if(this.currentPage==='dashboard') this.fetchStats(); }, 30000);
+                    setInterval(() => { if(this.dashTab==='logs') this.fetchLogs(); }, 15000);
+                    setInterval(() => { if(this.currentPage==='dashboard') this.fetchDrift(); }, 60000);
+                }
+            },
+
+            async fetchStats() {
+                try {
+                    const r = await fetch(`${API}/api/dashboard/stats`, { headers: this.authHeaders() });
+                    if (!r.ok) throw new Error();
+                    this.stats = await r.json();
+                    this.apiOnline = true;
+                    this.loading.stats = false;
+                    // Wait for DOM to update with new data, then draw charts
+                    setTimeout(() => this.initCharts(), 50);
+                } catch(e) { this.apiOnline = false; this.loading.stats = false; }
+            },
+
+            async fetchEndpoints() {
+                try {
+                    const r = await fetch(`${API}/api/endpoints/`, { headers: this.authHeaders() });
+                    if (!r.ok) throw new Error();
+                    const d = await r.json();
+                    this.endpoints = Array.isArray(d) ? d : [];
+                } catch(e) {}
+                finally { this.loading.endpoints = false; }
+            },
+
+            async fetchLogs() {
+                try {
+                    this.loading.logs = true;
+                    const url = this.logFilter === 'errors' ? `${API}/api/logs/errors?hours=24` : `${API}/api/logs/?limit=100`;
+                    const r = await fetch(url, { headers: this.authHeaders() });
+                    const d = await r.json();
+                    this.logs = Array.isArray(d) ? d : (d.logs || []);
+                } catch(e) {}
+                finally { this.loading.logs = false; }
+            },
+
+            async fetchDrift() {
+                try {
+                    const r = await fetch(`${API}/api/endpoints/drift`, { headers: this.authHeaders() });
+                    const dr = await r.json();
+                    this.driftEndpoints = Array.isArray(dr) ? dr : [];
+                    this.driftEndpoints.forEach(ep => {
+                        if (!this.agentEvents.find(f => f.id === ep.id)) {
+                            const safe = (s) => String(s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                            this.agentEvents.unshift({ id:ep.id, color:'bg-orange-500', title:'Drift Detected', desc:`<code class="text-orange-300">${safe(ep.method)} ${safe(ep.path_pattern)}</code> — ${safe(ep.drift_summary||'Behavioral change detected')}`, time:this.timeAgo(ep.last_seen_at) });
+                        }
+                    });
+                    if (this.agentEvents.length > 10) this.agentEvents = this.agentEvents.slice(0,10);
+                } catch(e) {}
+            },
+
+            async selectEndpoint(ep) {
+                this.selectedEndpoint = ep;
+                this.docsViewMode = 'api';
+                try {
+                    const r = await fetch(`${API}/api/endpoints/${ep.id}`, { headers: this.authHeaders() });
+                    this.selectedEndpoint = await r.json();
+                } catch(e) {}
+                const _safe = (s) => String(s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                this.agentEvents.unshift({ id:Math.random(), color:'bg-blue-500', title:'Endpoint Loaded', desc:`Viewing docs for <code class="text-blue-300">${_safe(ep.method)} ${_safe(ep.path_pattern)}</code>`, time:'Just now' });
+                if (this.agentEvents.length > 10) this.agentEvents.pop();
+                this.refreshIcons();
+            },
+
+            async triggerAnalysis(ep) {
+                this.showToast('AI analysis started — check back in ~30 seconds', 'info');
+                const __safe = (s) => String(s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                this.agentEvents.unshift({ id:Math.random(), color:'bg-violet-500', title:'AI Analysis Started', desc:`Running LangGraph pipeline on <code class="text-violet-300">${__safe(ep.method)} ${__safe(ep.path_pattern)}</code>`, time:'Just now' });
+                try {
+                    await fetch(`${API}/api/endpoints/${ep.id}/analyze`, { method:'POST', headers: this.authHeaders() });
+                    setTimeout(async () => {
+                        await this.fetchEndpoints();
+                        await this.fetchDrift();
+                        const updated = this.endpoints.find(e => e.id === ep.id);
+                        if (updated) {
+                            this.selectedEndpoint = updated;
+                            const ___safe = (s) => String(s||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                            this.agentEvents.unshift({ id:Math.random(), color:'bg-green-500', title:'Docs Updated', desc:`AI documentation generated for <code class="text-green-300">${___safe(ep.path_pattern)}</code>`, time:'Just now' });
+                            this.showToast('AI documentation updated!', 'success');
+                        }
+                        this.refreshIcons();
+                    }, 12000);
+                } catch(e) { this.showToast('Failed to trigger analysis', 'error'); }
+            },
+
+            showToast(message, type='success') {
+                this.toast = { show:true, message, type };
+                setTimeout(() => { this.toast.show = false; }, 3500);
+            },
+
+            openLogModal(log) {
+                this.logModal = { show:true, log };
+            },
+
+            // ── COMPUTED ───────────────────────────────────────
+            get filteredEndpoints() {
+                if (!this.searchQuery) return this.endpoints;
+                const q = this.searchQuery.toLowerCase();
+                return this.endpoints.filter(e => e.path_pattern.toLowerCase().includes(q) || e.method.toLowerCase().includes(q));
+            },
+
+            // Truncate long paths for chart labels
+            truncPath(p, max=18) {
+                if (!p) return '';
+                return p.length > max ? '…'+p.slice(-max) : p;
+            },
+
+            methodColor(m) {
+                return {GET:'text-green-400 bg-green-500/10 border-green-500/20',POST:'text-blue-400 bg-blue-500/10 border-blue-500/20',PUT:'text-yellow-400 bg-yellow-500/10 border-yellow-500/20',DELETE:'text-red-400 bg-red-500/10 border-red-500/20',PATCH:'text-violet-400 bg-violet-500/10 border-violet-500/20'}[m] || 'text-gray-400 bg-gray-500/10 border-gray-500/20';
+            },
+
+            statusColor(s) {
+                if (s < 300) return 'text-green-400';
+                if (s < 400) return 'text-yellow-400';
+                if (s < 500) return 'text-orange-400';
+                return 'text-red-400';
+            },
+
+            statusBg(s) {
+                if (s < 300) return 'bg-green-500/10 border-green-500/20 text-green-400';
+                if (s < 400) return 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400';
+                if (s < 500) return 'bg-orange-500/10 border-orange-500/20 text-orange-400';
+                return 'bg-red-500/10 border-red-500/20 text-red-400';
+            },
+
+            timeAgo(iso) {
+                if (!iso) return '';
+                const d = (Date.now()-new Date(iso))/1000;
+                if (d < 60) return 'Just now';
+                if (d < 3600) return Math.floor(d/60)+'m ago';
+                if (d < 86400) return Math.floor(d/3600)+'h ago';
+                return Math.floor(d/86400)+'d ago';
+            },
+
+            authHeaders() {
+                const h = { 'Content-Type': 'application/json' };
+                if (this.currentUser.token) h['Authorization'] = `Bearer ${this.currentUser.token}`;
+                return h;
+            },
+
+            fmt(n) {
+                if (!n && n !== 0) return '0';
+                if (n >= 1e6) return (n/1e6).toFixed(1)+'M';
+                if (n >= 1e3) return (n/1e3).toFixed(1)+'K';
+                return ''+Math.round(n);
+            },
+
+            fmtBytes(b) {
+                if (!b) return '0 B';
+                if (b > 1024) return (b/1024).toFixed(1)+' KB';
+                return b+' B';
+            },
+
+            initCharts() {
+                if (this.dashTab !== 'main') return;
+                if (this.loading.stats) return;
+                // Debounce — cancel if user switches tabs again within 80ms
+                if (this._chartTimer) clearTimeout(this._chartTimer);
+                this._chartTimer = setTimeout(() => {
+                    if (this.dashTab !== 'main') return;
+                    const cu = document.getElementById('usageChart');
+                    const ce = document.getElementById('errorChart');
+                    if (!cu || !ce) return;
+                    try { if (this.usageChartInstance) this.usageChartInstance.destroy(); } catch(e) {}
+                    try { if (this.errorChartInstance) this.errorChartInstance.destroy(); } catch(e) {}
+                    Chart.defaults.color = '#6b7280';
+                    Chart.defaults.font.family = 'Inter';
+
+                    const top = (this.stats.top_endpoints || []).slice(0, 7);
+                    const labels = top.length ? top.map(e => this.truncPath(e.path_pattern)) : ['No data'];
+                    const vals   = top.length ? top.map(e => e.total_requests) : [0];
+
+                    this.usageChartInstance = new Chart(cu, {
+                        type: 'bar',
+                        data: {
+                            labels,
+                            datasets: [{
+                                label: 'Requests',
+                                data: vals,
+                                backgroundColor: vals.map((_, i) => i === 0 ? 'rgba(59,130,246,0.85)' : 'rgba(59,130,246,0.45)'),
+                                borderRadius: 6,
+                                borderSkipped: false,
+                            }]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            animation: { duration: 400 },
+                            plugins: { legend: { display: false }, tooltip: { callbacks: { title: (items) => top[items[0].dataIndex]?.path_pattern || '' } } },
+                            scales: {
+                                y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7280' } },
+                                x: { grid: { display: false }, ticks: { color: '#6b7280', maxRotation: 0, font: { size: 10 } } }
+                            }
+                        }
+                    });
+
+                    const err = (this.stats.top_endpoints || []).slice(0, 6);
+                    const eLabels = err.length ? err.map(e => this.truncPath(e.path_pattern)) : ['No data'];
+                    const eVals   = err.length ? err.map(e => +(e.error_rate * 100).toFixed(2)) : [0];
+                    const eColors = err.length ? err.map(e => e.error_rate > 0.05 ? 'rgba(239,68,68,0.75)' : e.error_rate > 0.01 ? 'rgba(249,115,22,0.6)' : 'rgba(59,130,246,0.5)') : ['rgba(59,130,246,0.5)'];
+
+                    this.errorChartInstance = new Chart(ce, {
+                        type: 'bar',
+                        data: { labels: eLabels, datasets: [{ label: 'Error %', data: eVals, backgroundColor: eColors, borderRadius: 6, borderSkipped: false }] },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            animation: { duration: 400 },
+                            plugins: { legend: { display: false }, tooltip: { callbacks: { title: (items) => err[items[0].dataIndex]?.path_pattern || '' } } },
+                            scales: {
+                                y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#6b7280', callback: v => v + '%' } },
+                                x: { grid: { display: false }, ticks: { color: '#6b7280', maxRotation: 0, font: { size: 10 } } }
+                            }
+                        }
+                    });
+                }, 80);
+            },
+
+            // ── GITHUB ────────────────────────────────────────────
+            async fetchGithubDashboard() {
+                if (!this.currentUser.email) return;
+                this.github.loadingDashboard = true;
+                try {
+                    const r = await fetch(`${API}/api/github/dashboard?user_email=${encodeURIComponent(this.currentUser.email)}`, { headers: this.authHeaders() });
+                    if (r.ok) {
+                        this.github.dashboard = await r.json();
+                    }
+                    const h = await fetch(`${API}/api/github/history?user_email=${encodeURIComponent(this.currentUser.email)}&limit=20`, { headers: this.authHeaders() });
+                    if (h.ok) {
+                        this.github.history = await h.json();
+                    }
+                } catch(e) {} finally { this.github.loadingDashboard = false; }
+            },
+
+            async connectGithub() {
+                this.github.error = '';
+                this.github.connecting = true;
+
+                const url = this.github.repoUrl.trim();
+                const token = this.github.token.trim();
+
+                if (!url) {
+                    this.github.error = 'Please enter a repository URL.';
+                    this.github.connecting = false;
+                    return;
+                }
+
+                try {
+                    // Call our FastAPI backend which proxies to GitHub
+                    // This avoids CORS issues with calling api.github.com directly from browser
+                    const res = await fetch(`${API}/api/github/repo`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ repo_url: url, token: token || null })
+                    });
+
+                    const data = await res.json();
+
+                    if (!res.ok) {
+                        this.github.error = data.detail || `Error ${res.status}`;
+                        return;
+                    }
+
+                    this.github.repoInfo = data.repo_info;
+                    this.github.commits  = data.commits || [];
+                    this.github.connected = true;
+
+                    localStorage.setItem('livedocai_github', JSON.stringify({
+                        repoUrl: url,
+                        owner: data.owner,
+                        repo: data.repo,
+                        connected: true
+                    }));
+                    // Save token to sessionStorage (cleared when browser closes)
+                    if (token) sessionStorage.setItem('livedocai_github_token', token);
+
+                    this.showToast('GitHub repository connected!', 'success');
+                    this.refreshIcons();
+
+                } catch(e) {
+                    this.github.error = 'Cannot reach backend. Make sure uvicorn is running on localhost:8000.';
+                } finally {
+                    this.github.connecting = false;
+                }
+            },
+
+            disconnectGithub() {
+                this.github = { connected:false, repoUrl:'', token:'', repoInfo:null, commits:[], connecting:false, error:'', docTarget:'new', customDocPath:'', generating:false, generatedDoc:'', prUrl:'', prError:'' };
+                localStorage.removeItem('livedocai_github');
+                this.showToast('Repository disconnected.', 'info');
+            },
+
+            toggleDarkMode() {
+                this.darkMode = !this.darkMode;
+                if (this.darkMode) {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('livedocai_theme', 'dark');
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('livedocai_theme', 'light');
+                }
+            },
+
+            async generateDocs() {
+                this.github.generating = true;
+                this.github.prUrl = '';
+                this.github.prError = '';
+
+                const savedGh = JSON.parse(localStorage.getItem('livedocai_github') || '{}');
+                const owner = savedGh.owner;
+                const repo  = savedGh.repo;
+
+                if (!owner || !repo) {
+                    this.github.prError = 'Repository not connected properly. Please reconnect.';
+                    this.github.generating = false;
+                    return;
+                }
+
+                // Determine target path
+                let targetPath = 'DOCUMENTATION.md';
+                if (this.github.docTarget === 'readme') {
+                    targetPath = 'README.md';
+                } else if (this.github.docTarget === 'custom' && this.github.customDocPath.trim()) {
+                    // Extract file path from full GitHub URL if given
+                    const customUrl = this.github.customDocPath.trim();
+                    const pathMatch = customUrl.match(/github\.com\/[^/]+\/[^/]+\/blob\/[^/]+\/(.+)$/);
+                    targetPath = pathMatch ? pathMatch[1] : customUrl;
+                }
+
+                try {
+                    // Step 1: Analyze code + generate docs
+                    const analyzeRes = await fetch(`${API}/api/github/analyze`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            owner,
+                            repo,
+                            token: this.github.token,
+                            doc_target: this.github.docTarget === 'new' ? 'documentation_md' : this.github.docTarget,
+                            custom_path: this.github.customDocPath || null,
+                            user_email: this.currentUser.email || null,
+                        })
+                    });
+                    const analyzeData = await analyzeRes.json();
+                    if (!analyzeRes.ok) {
+                        this.github.prError = analyzeData.detail || 'Failed to analyze repository.';
+                        return;
+                    }
+
+                    // Step 2: Create PR with generated docs
+                    const prRes = await fetch(`${API}/api/github/create-pr`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            owner,
+                            repo,
+                            token: this.github.token,
+                            doc_target: this.github.docTarget === 'new' ? 'documentation_md' : this.github.docTarget,
+                            custom_path: this.github.customDocPath || null,
+                            generated_docs: analyzeData.generated_docs,
+                            files_analyzed: analyzeData.files_analyzed || [],
+                            drift_detected: analyzeData.drift_detected || 'UNKNOWN',
+                            drift_summary: analyzeData.drift_summary || null,
+                            commit_sha: analyzeData.commit_sha || null,
+                            user_email: this.currentUser.email || null,
+                        })
+                    });
+                    const prData = await prRes.json();
+                    if (!prRes.ok) {
+                        this.github.prError = prData.detail || 'Failed to create pull request.';
+                        return;
+                    }
+
+                    this.github.prUrl = prData.pr_url;
+                    this.github.generatedDoc = analyzeData.generated_docs?.slice(0, 500) || '';
+                    this.showToast('Pull request opened successfully! 🎉', 'success');
+
+                    // Refresh commits + dashboard
+                    await this.connectGithub();
+                    await this.fetchGithubDashboard();
+
+                } catch(e) {
+                    this.github.prError = 'Cannot reach backend. Make sure uvicorn is running on localhost:8000.';
+                } finally {
+                    this.github.generating = false;
+                    this.refreshIcons();
+                }
+            },
+
+            refreshIcons() {
+                this.$nextTick(() => { if (window.lucide) lucide.createIcons(); });
+            }
+        }));
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if (window.lucide) lucide.createIcons();
+    });
+    </script>
+</head>
+<body x-data="appData" class="antialiased selection:bg-accent selection:text-white">
+
+<!-- BG Orbs -->
+<div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+    <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/10 blur-[120px]"></div>
+    <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-accent/10 blur-[120px]"></div>
+</div>
+
+<!-- ══ TOAST ══ -->
+<div :class="toast.show ? 'show' : ''" class="toast">
+    <div :class="toast.type==='success'?'border-green-500/40 bg-green-500/10 text-green-400':toast.type==='error'?'border-red-500/40 bg-red-500/10 text-red-400':'border-blue-500/40 bg-blue-500/10 text-blue-400'"
+         class="flex items-center space-x-3 px-5 py-3 rounded-xl border shadow-2xl glass text-sm font-medium">
+        <svg x-show="toast.type==='success'" class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <svg x-show="toast.type==='error'" class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <svg x-show="toast.type==='info'" class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span x-text="toast.message"></span>
+    </div>
+</div>
+
+<!-- ══ LOG DETAIL MODAL ══ -->
+<div x-show="logModal.show" x-cloak @click.self="logModal.show=false" class="modal-backdrop flex items-center justify-center p-4">
+    <div class="glass-card rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col" x-show="logModal.log">
+        <div class="flex items-center justify-between p-5 border-b border-border">
+            <div class="flex items-center space-x-3">
+                <template x-if="logModal.log">
+                    <span :class="methodColor(logModal.log.method)" class="text-xs font-bold px-2 py-0.5 rounded border uppercase font-mono" x-text="logModal.log?.method"></span>
+                </template>
+                <span class="font-mono text-white text-sm" x-text="logModal.log?.path"></span>
+            </div>
+            <button @click="logModal.show=false" class="text-gray-500 hover:text-white transition-colors">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+        <div class="overflow-y-auto p-5 space-y-5 text-sm" x-show="logModal.log">
+            <!-- Meta row -->
+            <div class="grid grid-cols-4 gap-3">
+                <div class="glass rounded-lg p-3 text-center">
+                    <p class="text-xs text-gray-500 mb-1">Status</p>
+                    <p class="font-bold font-mono" :class="statusColor(logModal.log?.status_code)" x-text="logModal.log?.status_code"></p>
+                </div>
+                <div class="glass rounded-lg p-3 text-center">
+                    <p class="text-xs text-gray-500 mb-1">Latency</p>
+                    <p class="font-bold text-white" x-text="logModal.log?.latency_ms ? logModal.log.latency_ms.toFixed(1)+'ms' : '—'"></p>
+                </div>
+                <div class="glass rounded-lg p-3 text-center">
+                    <p class="text-xs text-gray-500 mb-1">Size</p>
+                    <p class="font-bold text-white" x-text="fmtBytes(logModal.log?.response_size_bytes)"></p>
+                </div>
+                <div class="glass rounded-lg p-3 text-center">
+                    <p class="text-xs text-gray-500 mb-1">IP</p>
+                    <p class="font-bold text-white text-xs" x-text="logModal.log?.client_ip||'—'"></p>
+                </div>
+            </div>
+            <!-- Request body -->
+            <div x-show="logModal.log?.request_body">
+                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Request Body</p>
+                <pre class="code-block rounded-lg p-4 text-xs text-gray-300 overflow-x-auto whitespace-pre-wrap" x-text="logModal.log?.request_body"></pre>
+            </div>
+            <!-- Response body -->
+            <div x-show="logModal.log?.response_body">
+                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Response Body</p>
+                <pre class="code-block rounded-lg p-4 text-xs text-gray-300 overflow-x-auto whitespace-pre-wrap max-h-48" x-text="logModal.log?.response_body"></pre>
+            </div>
+            <!-- Timestamp -->
+            <p class="text-xs text-gray-600" x-text="logModal.log?.created_at ? 'Captured: ' + new Date(logModal.log.created_at).toLocaleString() : ''"></p>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     LANDING PAGE
+══════════════════════════════════════ -->
+<div x-show="currentPage === 'landing'" x-transition.opacity.duration.500ms class="relative z-10 min-h-screen flex flex-col">
+    <nav class="glass sticky top-0 z-50 px-6 py-4 flex justify-between items-center border-b border-white/5">
+        <div class="flex items-center space-x-2 cursor-pointer" @click="navigate('landing')">
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-[0_0_15px_rgba(139,92,246,0.5)]">
+                <i data-lucide="zap" class="w-5 h-5 text-white"></i>
+            </div>
+            <span class="text-xl font-bold tracking-tight text-white">LiveDoc <span class="text-blue-400">AI</span></span>
+        </div>
+        <div class="hidden md:flex items-center space-x-8 text-sm font-medium text-gray-400">
+            <a href="#features" class="hover:text-white transition-colors">Features</a>
+            <a href="#how-it-works" class="hover:text-white transition-colors">How it Works</a>
+            <a href="#" class="hover:text-white transition-colors">Pricing</a>
+        </div>
+        <div class="flex items-center space-x-4">
+            <button @click="navigate('auth', 'signin')" class="text-sm font-medium text-gray-300 hover:text-white transition-colors">Log In</button>
+            <button @click="navigate('auth', 'signup')" class="text-sm font-medium bg-white/10 hover:bg-white/20 border border-white/10 text-white px-4 py-2 rounded-lg transition-all shadow-[0_0_15px_rgba(255,255,255,0.05)]">Get Started</button>
+        </div>
+    </nav>
+
+    <main class="flex-grow flex items-center justify-center px-6 py-20 lg:py-32 max-w-7xl mx-auto w-full">
+        <div class="grid lg:grid-cols-2 gap-16 items-center">
+            <div class="space-y-8 z-10 relative">
+                <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 text-xs font-medium backdrop-blur-sm">
+                    <span class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
+                    <span>v2.0 Documentation Engine Live</span>
+                </div>
+                <h1 class="text-5xl lg:text-7xl font-bold tracking-tight text-white leading-[1.1]">Documentation <br/><span class="gradient-text">that lives.</span></h1>
+                <p class="text-lg lg:text-xl text-gray-400 max-w-xl leading-relaxed">Stop maintaining static API docs. LiveDoc AI observes production traffic, analyzes behavior with AI agents, and keeps your documentation automatically updated.</p>
+                <div class="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
+                    <button @click="navigate('auth', 'signup')" class="group relative px-8 py-4 bg-white text-black font-semibold rounded-xl overflow-hidden transition-all hover:scale-105 active:scale-95">
+                        <div class="absolute inset-0 bg-gradient-to-r from-blue-400 to-violet-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                        <span class="relative z-10 flex items-center group-hover:text-white transition-colors">Get Started Free <i data-lucide="arrow-right" class="ml-2 w-4 h-4"></i></span>
+                    </button>
+                    <button class="px-8 py-4 glass text-white font-medium rounded-xl hover:bg-white/10 transition-all flex items-center">
+                        <i data-lucide="play-circle" class="mr-2 w-5 h-5 text-gray-400"></i> View Demo
+                    </button>
+                </div>
+            </div>
+            <div class="relative z-10 animate-float lg:ml-auto w-full max-w-lg">
+                <div class="absolute inset-0 bg-gradient-to-tr from-blue-600 to-violet-600 rounded-2xl blur-2xl opacity-20"></div>
+                <div class="glass-card rounded-2xl border border-white/10 overflow-hidden relative shadow-2xl">
+                    <div class="bg-black/40 border-b border-white/5 px-4 py-3 flex items-center space-x-2">
+                        <div class="w-3 h-3 rounded-full bg-red-500/80"></div>
+                        <div class="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+                        <div class="w-3 h-3 rounded-full bg-green-500/80"></div>
+                        <div class="ml-4 text-xs font-mono text-gray-500 flex-1 text-center pr-8">Live Update Feed</div>
+                    </div>
+                    <div class="p-5 font-mono text-sm space-y-3 h-[320px] overflow-hidden relative">
+                        <div class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#12121a] z-10 pointer-events-none"></div>
+                        <template x-for="(log, index) in landingLogs" :key="index">
+                            <div class="animate-slide-in flex items-start space-x-3 opacity-80" :style="`animation-delay: ${index * 0.2}s`">
+                                <span class="text-green-400 mt-0.5"><i data-lucide="check-circle-2" class="w-4 h-4"></i></span>
+                                <div>
+                                    <div class="text-gray-300" x-html="log.text"></div>
+                                    <div class="text-xs text-gray-500 mt-1" x-text="log.time"></div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                <div class="absolute -bottom-6 -right-6 glass-card px-4 py-3 rounded-xl border border-white/10 shadow-xl flex items-center space-x-3 animate-pulse-glow">
+                    <div class="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center"><i data-lucide="activity" class="w-5 h-5 text-green-400"></i></div>
+                    <div><div class="text-xs text-gray-400 uppercase font-bold">Status</div><div class="text-sm font-medium text-white">Docs Syncing...</div></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <section id="features" class="py-24 border-t border-white/5 bg-[#0d0d14] relative z-10">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl font-bold text-white mb-4">Everything you need to scale APIs</h2>
+                <p class="text-gray-400 max-w-2xl mx-auto">LiveDoc AI completely automates the documentation lifecycle so your engineers can focus on building.</p>
+            </div>
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="glass-card p-6 rounded-2xl hover:-translate-y-1 transition-transform duration-300"><div class="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-4"><i data-lucide="refresh-cw" class="w-6 h-6 text-blue-400"></i></div><h3 class="text-lg font-semibold text-white mb-2">Live Documentation</h3><p class="text-sm text-gray-400">Docs automatically update from real API traffic. Never deal with stale documentation again.</p></div>
+                <div class="glass-card p-6 rounded-2xl hover:-translate-y-1 transition-transform duration-300"><div class="w-12 h-12 rounded-xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center mb-4"><i data-lucide="brain" class="w-6 h-6 text-violet-400"></i></div><h3 class="text-lg font-semibold text-white mb-2">AI Intelligence</h3><p class="text-sm text-gray-400">AI agents detect edge cases, drift, and undocumented behavior securely in the background.</p></div>
+                <div class="glass-card p-6 rounded-2xl hover:-translate-y-1 transition-transform duration-300"><div class="w-12 h-12 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center mb-4"><i data-lucide="bar-chart-3" class="w-6 h-6 text-green-400"></i></div><h3 class="text-lg font-semibold text-white mb-2">Production Insights</h3><p class="text-sm text-gray-400">See latency, error rates, and real usage patterns directly integrated into your API endpoints.</p></div>
+                <div class="glass-card p-6 rounded-2xl hover:-translate-y-1 transition-transform duration-300"><div class="w-12 h-12 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center mb-4"><i data-lucide="github" class="w-6 h-6 text-orange-400"></i></div><h3 class="text-lg font-semibold text-white mb-2">GitHub Integration</h3><p class="text-sm text-gray-400">Connect repos and generate OpenAPI specs automatically with perfectly formatted PRs.</p></div>
+            </div>
+        </div>
+    </section>
+
+    <section id="how-it-works" class="py-24 relative z-10">
+        <div class="max-w-5xl mx-auto px-6 text-center">
+            <h2 class="text-3xl font-bold text-white mb-16">How it works</h2>
+            <div class="flex flex-col md:flex-row items-center justify-between relative">
+                <div class="hidden md:block absolute top-1/2 left-0 w-full h-0.5 bg-gradient-to-r from-blue-500/20 via-violet-500/50 to-blue-500/20 -z-10"></div>
+                <div class="flex flex-col items-center mb-8 md:mb-0"><div class="w-20 h-20 rounded-2xl glass flex items-center justify-center mb-4 glow-border"><i data-lucide="network" class="w-8 h-8 text-blue-400"></i></div><h4 class="font-semibold text-white">API Traffic</h4><p class="text-xs text-gray-400 mt-1 max-w-[150px]">SDK observes incoming requests & responses</p></div>
+                <i data-lucide="arrow-right" class="hidden md:block w-6 h-6 text-gray-600"></i>
+                <i data-lucide="arrow-down" class="md:hidden w-6 h-6 text-gray-600 mb-8"></i>
+                <div class="flex flex-col items-center mb-8 md:mb-0"><div class="w-20 h-20 rounded-2xl glass flex items-center justify-center mb-4 glow-border"><i data-lucide="bot" class="w-8 h-8 text-violet-400"></i></div><h4 class="font-semibold text-white">AI Agents</h4><p class="text-xs text-gray-400 mt-1 max-w-[150px]">Analyzes payloads and detects schema drift</p></div>
+                <i data-lucide="arrow-right" class="hidden md:block w-6 h-6 text-gray-600"></i>
+                <i data-lucide="arrow-down" class="md:hidden w-6 h-6 text-gray-600 mb-8"></i>
+                <div class="flex flex-col items-center"><div class="w-20 h-20 rounded-2xl glass flex items-center justify-center mb-4 glow-border"><i data-lucide="book-open" class="w-8 h-8 text-green-400"></i></div><h4 class="font-semibold text-white">Live Docs</h4><p class="text-xs text-gray-400 mt-1 max-w-[150px]">Documentation instantly updates for users</p></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-24 relative z-10 border-t border-white/5 bg-gradient-to-b from-[#0b0b0f] to-[#13131f]">
+        <div class="max-w-3xl mx-auto px-6 text-center">
+            <h2 class="text-4xl font-bold text-white mb-6">Let your documentation maintain itself.</h2>
+            <p class="text-gray-400 mb-8 text-lg">Join forward-thinking engineering teams shipping faster with LiveDoc AI.</p>
+            <button @click="navigate('auth', 'signup')" class="px-8 py-4 bg-white text-black font-semibold rounded-xl hover:bg-gray-200 transition-colors shadow-[0_0_20px_rgba(255,255,255,0.2)]">Get Started Now</button>
+        </div>
+    </section>
+    <footer class="py-8 border-t border-white/5 text-center text-sm text-gray-500 relative z-10">© 2026 LiveDoc AI. All rights reserved.</footer>
+</div>
+
+<!-- ══════════════════════════════════════
+     AUTH PAGE
+══════════════════════════════════════ -->
+<div x-show="currentPage === 'auth'" x-cloak x-transition.opacity class="relative z-20 min-h-screen flex items-center justify-center px-4 py-12">
+    <div class="absolute inset-0 bg-[#0b0b0f] z-0"></div>
+    <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PGRlZnM+PHBhdHRlcm4gaWQ9ImciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTTAgMGg0MHY0MEgweiIgZmlsbD0ibm9uZSIvPjxjaXJjbGUgY3g9IjEiIGN5PSIxIiByPSIxIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDUpIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2cpIi8+PC9zdmc+')] z-0"></div>
+    <button @click="navigate('landing')" class="absolute top-8 left-8 text-gray-400 hover:text-white flex items-center z-10 transition-colors"><i data-lucide="arrow-left" class="w-4 h-4 mr-2"></i> Back to Home</button>
+    <div class="w-full max-w-md relative z-10">
+        <div class="text-center mb-8">
+            <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center mx-auto mb-4 shadow-[0_0_20px_rgba(139,92,246,0.4)]"><i data-lucide="zap" class="w-6 h-6 text-white"></i></div>
+            <h2 class="text-2xl font-bold text-white">Welcome to LiveDoc AI</h2>
+            <p class="text-gray-400 text-sm mt-1">Documentation that lives.</p>
+        </div>
+        <div class="glass-card rounded-2xl p-8 glow-border">
+            <div class="flex p-1 bg-black/50 rounded-lg mb-8 border border-white/5">
+                <button @click="authTab='signin'; authError=''" :class="authTab==='signin'?'bg-surface border-white/10 text-white shadow-md':'text-gray-400 hover:text-gray-200'" class="flex-1 py-2 text-sm font-medium rounded-md transition-all border border-transparent">Sign In</button>
+                <button @click="authTab='signup'; authError=''" :class="authTab==='signup'?'bg-surface border-white/10 text-white shadow-md':'text-gray-400 hover:text-gray-200'" class="flex-1 py-2 text-sm font-medium rounded-md transition-all border border-transparent">Sign Up</button>
+            </div>
+            <div x-show="authError" class="mb-5 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm flex items-center space-x-2">
+                <i data-lucide="alert-circle" class="w-4 h-4 flex-shrink-0"></i><span x-text="authError"></span>
+            </div>
+            <form @submit.prevent="login" class="space-y-5">
+                <div x-show="authTab === 'signup'"><label class="block text-xs font-medium text-gray-400 mb-1.5">Full Name</label><input x-model="userForm.name" type="text" class="w-full bg-[#0d0d12] border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-gray-600" placeholder="Jane Doe"></div>
+                <div x-show="authTab === 'signup'"><label class="block text-xs font-medium text-gray-400 mb-1.5">Organization</label><input x-model="userForm.org" type="text" class="w-full bg-[#0d0d12] border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-gray-600" placeholder="Acme Corp"></div>
+                <div><label class="block text-xs font-medium text-gray-400 mb-1.5">Work Email</label><input x-model="userForm.email" type="email" required class="w-full bg-[#0d0d12] border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-gray-600" placeholder="jane@company.com"></div>
+                <div>
+                    <div class="flex justify-between items-center mb-1.5"><label class="block text-xs font-medium text-gray-400">Password</label><a href="#" x-show="authTab==='signin'" class="text-xs text-blue-400 hover:text-blue-300">Forgot?</a></div>
+                    <input x-model="userForm.password" type="password" required class="w-full bg-[#0d0d12] border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-gray-600" placeholder="••••••••">
+                </div>
+                <!-- Keep me signed in -->
+                <div class="flex items-center space-x-2">
+                    <input type="checkbox" id="keepSignedIn" x-model="keepSignedIn"
+                        class="w-4 h-4 rounded border-white/20 bg-[#0d0d12] text-blue-500 focus:ring-blue-500 focus:ring-1 cursor-pointer accent-blue-500">
+                    <label for="keepSignedIn" class="text-sm text-gray-400 cursor-pointer select-none">Keep me signed in</label>
+                </div>
+
+                <button type="submit" :disabled="authLoading" class="w-full py-3 bg-white text-black font-semibold rounded-lg hover:bg-gray-200 transition-colors mt-2 shadow-[0_0_15px_rgba(255,255,255,0.1)] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2">
+                    <svg x-show="authLoading" class="animate-spin w-4 h-4 text-black" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <span x-text="authLoading ? 'Authenticating...' : (authTab==='signin' ? 'Sign In' : 'Create Account')"></span>
+                </button>
+                <div class="relative flex items-center py-4"><div class="flex-grow border-t border-white/10"></div><span class="flex-shrink-0 mx-4 text-xs text-gray-500">or continue with</span><div class="flex-grow border-t border-white/10"></div></div>
+                <button type="button" class="w-full py-2.5 bg-[#0d0d12] border border-white/10 text-white font-medium rounded-lg hover:bg-white/5 transition-colors flex items-center justify-center"><i data-lucide="github" class="w-4 h-4 mr-2"></i> GitHub</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     DASHBOARD
+══════════════════════════════════════ -->
+<div x-show="currentPage === 'dashboard'" x-cloak class="flex h-screen overflow-hidden bg-[#0b0b0f] z-30 relative">
+
+    <!-- Sidebar -->
+    <aside class="w-64 border-r border-border bg-surface flex flex-col flex-shrink-0">
+        <div class="h-16 flex items-center px-6 border-b border-border">
+            <div class="flex items-center space-x-2 cursor-pointer" @click="navigate('landing')">
+                <div class="w-6 h-6 rounded border border-blue-500/30 bg-blue-500/10 flex items-center justify-center"><i data-lucide="zap" class="w-3.5 h-3.5 text-blue-400"></i></div>
+                <span class="text-sm font-bold tracking-tight text-white">LiveDoc <span class="text-blue-400">AI</span></span>
+            </div>
+            <div class="ml-auto flex items-center space-x-1.5" :class="apiOnline?'text-green-400':'text-red-400'">
+                <span class="w-1.5 h-1.5 rounded-full animate-pulse" :class="apiOnline?'bg-green-400':'bg-red-400'"></span>
+                <span class="text-[10px] font-medium" x-text="apiOnline?'Live':'Offline'"></span>
+            </div>
+        </div>
+        <nav class="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+            <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-3 mt-4">Overview</div>
+            <button @click="dashTab='main'" :class="dashTab==='main'?'bg-white/10 text-white':'text-gray-400 hover:bg-white/5 hover:text-gray-200'" class="w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors"><i data-lucide="layout-dashboard" class="w-4 h-4 mr-3 flex-shrink-0"></i>Dashboard</button>
+            <button @click="dashTab='docs'" :class="dashTab==='docs'?'bg-white/10 text-white':'text-gray-400 hover:bg-white/5 hover:text-gray-200'" class="w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors"><i data-lucide="book-open" class="w-4 h-4 mr-3 flex-shrink-0"></i>Live Documentation<span class="ml-auto w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span></button>
+            <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-3 mt-6">Monitoring</div>
+            <button @click="dashTab='intelligence'" :class="dashTab==='intelligence'?'bg-white/10 text-white':'text-gray-400 hover:bg-white/5 hover:text-gray-200'" class="w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors">
+                <i data-lucide="brain" class="w-4 h-4 mr-3 flex-shrink-0"></i>API Intelligence
+                <template x-if="driftEndpoints.length > 0"><span class="ml-auto text-[10px] bg-orange-500/20 text-orange-400 border border-orange-500/30 px-1.5 py-0.5 rounded-full font-bold" x-text="driftEndpoints.length"></span></template>
+            </button>
+            <button @click="dashTab='logs'" :class="dashTab==='logs'?'bg-white/10 text-white':'text-gray-400 hover:bg-white/5 hover:text-gray-200'" class="w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors"><i data-lucide="terminal" class="w-4 h-4 mr-3 flex-shrink-0"></i>Traffic Logs</button>
+            <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-3 mt-6">Integrations</div>
+            <button @click="dashTab='github'" :class="dashTab==='github'?'bg-white/10 text-white':'text-gray-400 hover:bg-white/5 hover:text-gray-200'" class="w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors">
+                <i data-lucide="github" class="w-4 h-4 mr-3 flex-shrink-0"></i>GitHub Integration
+                <span x-show="github.connected" class="ml-auto w-2 h-2 rounded-full bg-green-500"></span>
+            </button>
+        </nav>
+        <div class="p-4 border-t border-border space-y-3">
+            <!-- Mini stats -->
+            <div class="glass rounded-lg p-3 space-y-2">
+                <div class="flex justify-between items-center text-xs"><span class="text-gray-500">Endpoints</span><span class="text-white font-semibold" x-text="stats.total_endpoints"></span></div>
+                <div class="flex justify-between items-center text-xs"><span class="text-gray-500">Requests 24h</span><span class="text-white font-semibold" x-text="fmt(stats.total_requests_24h)"></span></div>
+                <div class="flex justify-between items-center text-xs"><span class="text-gray-500">Drift Alerts</span><span class="font-semibold" :class="stats.endpoints_with_drift>0?'text-orange-400':'text-green-400'" x-text="stats.endpoints_with_drift"></span></div>
+            </div>
+            <!-- User + API Key -->
+            <div class="space-y-2">
+                <div class="flex items-center space-x-3 p-2 rounded-lg hover:bg-white/5 transition-colors">
+                    <img :src="`https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name)}&background=3b82f6&color=fff&size=64`" class="w-8 h-8 rounded-full flex-shrink-0">
+                    <div class="flex-1 min-w-0"><p class="text-sm font-medium text-white truncate" x-text="currentUser.name"></p><p class="text-xs text-gray-500 truncate" x-text="currentUser.org"></p></div>
+                    <button @click="logout()" title="Sign out" class="text-gray-500 hover:text-white transition-colors"><i data-lucide="log-out" class="w-4 h-4"></i></button>
+                </div>
+                <div x-show="currentUser.api_key" class="px-2">
+                    <p class="text-[10px] text-gray-600 mb-1">API Key</p>
+                    <div class="flex items-center space-x-1 bg-[#0d0d12] rounded px-2 py-1 border border-white/5">
+                        <code class="text-[10px] text-blue-400 truncate flex-1" x-text="currentUser.api_key?.slice(0,22)+'...'"></code>
+                        <button @click="navigator.clipboard.writeText(currentUser.api_key); showToast('API key copied!', 'success')"
+                            class="text-gray-600 hover:text-white transition-colors flex-shrink-0" title="Copy">
+                            <i data-lucide="copy" class="w-3 h-3"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="flex-1 flex flex-col overflow-hidden">
+        <!-- Offline banner -->
+        <div x-show="!apiOnline && !loading.stats" class="bg-red-500/10 border-b border-red-500/20 px-6 py-2.5 flex items-center space-x-2 text-sm text-red-400">
+            <i data-lucide="wifi-off" class="w-4 h-4 flex-shrink-0"></i>
+            <span>Cannot reach backend at localhost:8000. Make sure uvicorn is running.</span>
+            <button @click="fetchAll()" class="ml-auto text-xs border border-red-500/30 rounded px-2 py-0.5 hover:bg-red-500/10 transition-colors">Retry</button>
+        </div>
+
+        <!-- Topbar -->
+        <header class="h-16 flex items-center justify-between px-8 border-b border-border bg-[#0b0b0f]/80 backdrop-blur z-10 sticky top-0 flex-shrink-0">
+            <h2 class="text-lg font-semibold text-white" x-text="dashTab==='main'?'Dashboard':dashTab==='docs'?'Live Documentation':dashTab==='intelligence'?'API Intelligence':dashTab==='github'?'GitHub Integration':'Traffic Logs'"></h2>
+            <div class="flex items-center space-x-3">
+                <div class="relative">
+                    <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500"></i>
+                    <input x-model="searchQuery" type="text" placeholder="Search endpoints..." class="bg-surface border border-border rounded-lg pl-9 pr-4 py-1.5 text-sm text-white focus:outline-none focus:border-blue-500 w-64 transition-colors placeholder-gray-600">
+                </div>
+                <button @click="fetchAll()" class="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors" title="Refresh all data">
+                    <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+                </button>
+                <!-- Theme toggle -->
+                <button @click="toggleDarkMode()" class="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors" :title="darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'">
+                    <svg x-show="darkMode" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                    <svg x-show="!darkMode" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                </button>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-8">
+
+            <!-- ── MAIN DASHBOARD ── -->
+            <div x-show="dashTab === 'main'" class="tab-content space-y-6">
+
+                <!-- KPI cards -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="glass p-5 rounded-xl border border-white/5 relative overflow-hidden">
+                        <div class="absolute right-0 top-0 w-20 h-20 bg-blue-500/10 blur-xl rounded-full"></div>
+                        <div class="flex items-center justify-between mb-4"><h3 class="text-sm font-medium text-gray-400">Repos Connected</h3><i data-lucide="github" class="w-4 h-4 text-blue-400"></i></div>
+                        <div x-show="loading.stats" class="skeleton h-9 w-16 rounded mb-2"></div>
+                        <p x-show="!loading.stats" class="text-3xl font-bold text-white" x-text="github.dashboard.repos_connected || stats.total_endpoints"></p>
+                        <p class="text-xs text-gray-500 mt-2">GitHub repos monitored</p>
+                    </div>
+                    <div class="glass p-5 rounded-xl border border-white/5 relative overflow-hidden">
+                        <div class="absolute right-0 top-0 w-20 h-20 bg-violet-500/10 blur-xl rounded-full"></div>
+                        <div class="flex items-center justify-between mb-4"><h3 class="text-sm font-medium text-gray-400">PRs Opened</h3><i data-lucide="git-pull-request" class="w-4 h-4 text-violet-400"></i></div>
+                        <div x-show="loading.stats" class="skeleton h-9 w-24 rounded mb-2"></div>
+                        <p x-show="!loading.stats" class="text-3xl font-bold text-white" x-text="github.dashboard.total_prs_opened"></p>
+                        <p class="text-xs text-green-400 mt-2 flex items-center"><i data-lucide="trending-up" class="w-3 h-3 mr-1"></i>Auto-generated by AI</p>
+                    </div>
+                    <div class="glass p-5 rounded-xl border border-white/5 relative overflow-hidden">
+                        <div class="absolute right-0 top-0 w-20 h-20 bg-orange-500/10 blur-xl rounded-full"></div>
+                        <div class="flex items-center justify-between mb-4"><h3 class="text-sm font-medium text-gray-400">Drift Events</h3><i data-lucide="split" class="w-4 h-4 text-orange-400"></i></div>
+                        <div x-show="loading.stats" class="skeleton h-9 w-12 rounded mb-2"></div>
+                        <p x-show="!loading.stats" class="text-3xl font-bold text-white" x-text="github.dashboard.drift_events || stats.endpoints_with_drift"></p>
+                        <p class="text-xs text-gray-500 mt-2 cursor-pointer hover:text-orange-400" @click="dashTab='intelligence'">Docs out of sync →</p>
+                    </div>
+                    <div class="glass p-5 rounded-xl border border-red-500/20 glow-border relative overflow-hidden">
+                        <div class="flex items-center justify-between mb-4"><h3 class="text-sm font-medium text-gray-400">Avg Error Rate</h3><i data-lucide="alert-triangle" class="w-4 h-4 text-red-400"></i></div>
+                        <div x-show="loading.stats" class="skeleton h-9 w-20 rounded mb-2"></div>
+                        <p x-show="!loading.stats" class="text-3xl font-bold" :class="stats.avg_error_rate>0.05?'text-red-400':'text-white'" x-text="(stats.avg_error_rate*100).toFixed(1)+'%'"></p>
+                        <p class="text-xs text-gray-500 mt-2">Across monitored APIs</p>
+                    </div>
+                </div>
+
+                <!-- Charts -->
+                <div class="grid lg:grid-cols-2 gap-6">
+                    <div class="glass p-6 rounded-xl border border-white/5">
+                        <h3 class="text-sm font-semibold text-white mb-1">Requests per Endpoint</h3>
+                        <p class="text-xs text-gray-500 mb-5">Total hits in last 24h</p>
+                        <div class="h-56 relative">
+                            <canvas id="usageChart" class="relative z-10"></canvas>
+                            <div x-show="loading.stats" class="absolute inset-0 flex flex-col items-center justify-center"><div class="skeleton h-40 w-full rounded"></div></div>
+                            <div x-show="!loading.stats && stats.top_endpoints.length===0" class="absolute inset-0 flex flex-col items-center justify-center text-center">
+                                <i data-lucide="bar-chart-3" class="w-8 h-8 text-gray-600 mb-2"></i>
+                                <p class="text-gray-500 text-sm">No traffic data yet</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass p-6 rounded-xl border border-white/5">
+                        <h3 class="text-sm font-semibold text-white mb-1">Error Rate per Endpoint</h3>
+                        <p class="text-xs text-gray-500 mb-5"><span class="inline-block w-2 h-2 rounded-sm bg-red-500/75 mr-1"></span>High (&gt;5%) <span class="inline-block w-2 h-2 rounded-sm bg-orange-500/60 ml-2 mr-1"></span>Medium <span class="inline-block w-2 h-2 rounded-sm bg-blue-500/50 ml-2 mr-1"></span>Normal</p>
+                        <div class="h-56 relative">
+                            <canvas id="errorChart" class="relative z-10"></canvas>
+                            <div x-show="loading.stats" class="absolute inset-0 flex flex-col items-center justify-center"><div class="skeleton h-40 w-full rounded"></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity + Connected Repos -->
+                <div class="grid lg:grid-cols-2 gap-6">
+
+                    <!-- Recent doc generations -->
+                    <div class="glass rounded-xl border border-white/5 overflow-hidden">
+                        <div class="px-5 py-4 border-b border-border flex items-center justify-between">
+                            <h3 class="text-sm font-semibold text-white">Recent Activity</h3>
+                            <button @click="dashTab='github'" class="text-xs text-blue-400 hover:text-blue-300">View all →</button>
+                        </div>
+                        <div x-show="github.dashboard.recent_activity.length === 0" class="px-5 py-8 text-center">
+                            <i data-lucide="git-pull-request" class="w-8 h-8 text-gray-600 mx-auto mb-2"></i>
+                            <p class="text-gray-500 text-sm">No docs generated yet</p>
+                            <button @click="dashTab='github'" class="text-xs text-blue-400 hover:text-blue-300 mt-2">Connect a repo →</button>
+                        </div>
+                        <div class="divide-y divide-border">
+                            <template x-for="item in github.dashboard.recent_activity.slice(0,5)" :key="item.id">
+                                <div class="px-5 py-3 flex items-center justify-between hover:bg-white/3 transition-colors">
+                                    <div class="flex items-center space-x-3 min-w-0">
+                                        <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
+                                             :class="item.drift_detected==='YES' ? 'bg-orange-500/10' : 'bg-green-500/10'">
+                                            <i :data-lucide="item.drift_detected==='YES' ? 'alert-triangle' : 'check-circle'"
+                                               class="w-3.5 h-3.5"
+                                               :class="item.drift_detected==='YES' ? 'text-orange-400' : 'text-green-400'"></i>
+                                        </div>
+                                        <div class="min-w-0">
+                                            <p class="text-sm text-white truncate font-mono" x-text="item.owner+'/'+item.repo"></p>
+                                            <p class="text-xs text-gray-500" x-text="'PR #'+(item.pr_number||'?')+' · '+item.file_path"></p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center space-x-2 flex-shrink-0 ml-2">
+                                        <span class="text-xs text-gray-500" x-text="timeAgo(item.created_at)"></span>
+                                        <a x-show="item.pr_url" :href="item.pr_url" target="_blank" class="text-blue-400 hover:text-blue-300">
+                                            <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Bottom metric cards -->
+                    <div class="space-y-4">
+                        <div class="glass p-5 rounded-xl border border-white/5">
+                            <div class="flex items-center mb-3"><div class="w-8 h-8 rounded bg-blue-500/10 flex items-center justify-center mr-3"><i data-lucide="zap" class="w-4 h-4 text-blue-400"></i></div><div><h4 class="text-sm font-semibold text-white">Most Active Endpoint</h4><p class="text-xs text-gray-500">Last 24 hours</p></div></div>
+                            <template x-if="stats.top_endpoints && stats.top_endpoints.length > 0">
+                                <div>
+                                    <div class="font-mono text-sm text-gray-300 bg-surface px-3 py-2 rounded border border-border flex items-center space-x-2 mb-2">
+                                        <span :class="methodColor(stats.top_endpoints[0].method)" class="text-xs font-bold uppercase" x-text="stats.top_endpoints[0].method"></span>
+                                        <span class="truncate text-xs" x-text="stats.top_endpoints[0].path_pattern"></span>
+                                    </div>
+                                    <p class="text-2xl font-bold text-white" x-text="fmt(stats.top_endpoints[0].total_requests)+' requests'"></p>
+                                </div>
+                            </template>
+                            <p x-show="!stats.top_endpoints || stats.top_endpoints.length===0" class="text-gray-600 text-sm">No data yet</p>
+                        </div>
+                        <div class="glass p-5 rounded-xl border border-white/5">
+                            <div class="flex items-center mb-3"><div class="w-8 h-8 rounded bg-orange-500/10 flex items-center justify-center mr-3"><i data-lucide="clock" class="w-4 h-4 text-orange-400"></i></div><div><h4 class="text-sm font-semibold text-white">Slowest Endpoint</h4><p class="text-xs text-gray-500">Avg Latency</p></div></div>
+                            <template x-if="stats.top_endpoints && stats.top_endpoints.length > 0">
+                                <div>
+                                    <div class="font-mono text-sm text-gray-300 bg-surface px-3 py-2 rounded border border-border flex items-center space-x-2 mb-2">
+                                        <span :class="methodColor(stats.top_endpoints.slice().sort((a,b)=>b.avg_latency_ms-a.avg_latency_ms)[0].method)" class="text-xs font-bold uppercase" x-text="stats.top_endpoints.slice().sort((a,b)=>b.avg_latency_ms-a.avg_latency_ms)[0].method"></span>
+                                        <span class="truncate text-xs" x-text="stats.top_endpoints.slice().sort((a,b)=>b.avg_latency_ms-a.avg_latency_ms)[0].path_pattern"></span>
+                                    </div>
+                                    <p class="text-2xl font-bold text-orange-400" x-text="stats.top_endpoints.slice().sort((a,b)=>b.avg_latency_ms-a.avg_latency_ms)[0].avg_latency_ms.toFixed(0)+'ms'"></p>
+                                </div>
+                            </template>
+                            <p x-show="!stats.top_endpoints || stats.top_endpoints.length===0" class="text-gray-600 text-sm">No data yet</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+                        <!-- ── LIVE DOCS ── -->
+            <div x-show="dashTab === 'docs'" class="tab-content flex gap-6 overflow-hidden" style="height:calc(100vh - 9rem)">
+                <!-- Endpoint list -->
+                <div class="w-72 flex-shrink-0 glass rounded-xl border border-border flex flex-col overflow-hidden">
+                    <div class="p-3 border-b border-border bg-[#0b0b0f]">
+                        <div class="flex items-center justify-between mb-2">
+                            <p class="text-[10px] font-semibold text-gray-500 uppercase tracking-wider">Endpoints</p>
+                            <span class="text-[10px] text-gray-600" x-text="filteredEndpoints.length+' found'"></span>
+                        </div>
+                        <div class="relative"><i data-lucide="search" class="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-500"></i><input x-model="searchQuery" placeholder="Filter by path or method…" class="w-full bg-surface border border-border rounded-md pl-7 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500 placeholder-gray-600"></div>
+                    </div>
+                    <div class="flex-1 overflow-y-auto py-2">
+                        <!-- Skeleton -->
+                        <template x-if="loading.endpoints">
+                            <div class="space-y-1 px-3 py-2">
+                                <template x-for="i in 5" :key="i"><div class="skeleton h-12 rounded-lg"></div></template>
+                            </div>
+                        </template>
+                        <template x-if="!loading.endpoints && filteredEndpoints.length === 0">
+                            <div class="flex flex-col items-center justify-center h-40 text-center px-4">
+                                <i data-lucide="inbox" class="w-8 h-8 text-gray-600 mb-2"></i>
+                                <p class="text-gray-500 text-xs">No endpoints discovered yet.</p>
+                                <p class="text-gray-600 text-xs mt-1">Make API requests to populate this list.</p>
+                            </div>
+                        </template>
+                        <template x-for="ep in filteredEndpoints" :key="ep.id">
+                            <button @click="selectEndpoint(ep)" :class="selectedEndpoint?.id===ep.id?'bg-white/10 border-l-2 border-blue-500':'hover:bg-white/5 border-l-2 border-transparent'" class="w-full text-left px-4 py-3 transition-all group">
+                                <div class="flex items-center space-x-2 mb-1">
+                                    <span :class="methodColor(ep.method)" class="text-[10px] font-bold px-1.5 py-0.5 rounded border uppercase font-mono flex-shrink-0" x-text="ep.method"></span>
+                                    <span class="font-mono text-xs text-gray-300 truncate" x-text="ep.path_pattern"></span>
+                                </div>
+                                <div class="flex items-center space-x-3 pl-0.5">
+                                    <span class="text-[10px] text-gray-500" x-text="fmt(ep.total_requests)+' req'"></span>
+                                    <span class="text-[10px] text-gray-500" x-text="ep.avg_latency_ms.toFixed(0)+'ms avg'"></span>
+                                    <span x-show="ep.has_drift" class="text-[10px] text-orange-400 flex items-center font-medium"><span class="w-1.5 h-1.5 rounded-full bg-orange-400 mr-1 animate-pulse"></span>Drift</span>
+                                    <span x-show="ep.ai_documentation && !ep.has_drift" class="text-[10px] text-blue-400">AI ✓</span>
+                                </div>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Docs viewer -->
+                <div class="flex-1 glass rounded-xl border border-border flex flex-col overflow-hidden min-w-0">
+                    <!-- Empty state -->
+                    <div x-show="!selectedEndpoint" class="flex-1 flex flex-col items-center justify-center text-center p-8">
+                        <div class="w-16 h-16 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-5"><i data-lucide="book-open" class="w-8 h-8 text-blue-400"></i></div>
+                        <h3 class="text-white font-semibold text-lg mb-2">Select an Endpoint</h3>
+                        <p class="text-gray-500 text-sm max-w-xs">Choose any endpoint from the left panel to view its AI-generated documentation, drift analysis, and real usage examples.</p>
+                    </div>
+
+                    <template x-if="selectedEndpoint">
+                        <div class="flex flex-col overflow-hidden" style="height:100%">
+                            <!-- Endpoint header -->
+                            <div class="p-6 border-b border-border bg-surface/50 flex-shrink-0">
+                                <div class="flex items-start justify-between mb-3">
+                                    <div class="flex items-center space-x-3 min-w-0">
+                                        <span :class="methodColor(selectedEndpoint.method)" class="px-2.5 py-1 text-xs font-bold rounded border uppercase font-mono flex-shrink-0" x-text="selectedEndpoint.method"></span>
+                                        <span class="text-lg font-mono text-white truncate" x-text="selectedEndpoint.path_pattern"></span>
+                                    </div>
+                                    <div class="flex items-center space-x-2 flex-shrink-0 ml-4">
+                                        <div x-show="selectedEndpoint.ai_documentation" class="flex items-center space-x-1.5 px-3 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 text-xs font-medium whitespace-nowrap">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></span><span>AI Generated</span>
+                                        </div>
+                                        <button @click="triggerAnalysis(selectedEndpoint)" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-violet-500/10 border border-violet-500/20 text-violet-400 text-xs hover:bg-violet-500/20 transition-colors whitespace-nowrap">
+                                            <i data-lucide="cpu" class="w-3 h-3"></i><span>Re-analyze</span>
+                                        </button>
+                                    </div>
+                                </div>
+                                <!-- Stats pills -->
+                                <div class="flex items-center flex-wrap gap-3 text-xs">
+                                    <span class="flex items-center space-x-1.5 px-2.5 py-1 bg-white/5 rounded-full"><i data-lucide="activity" class="w-3 h-3 text-blue-400"></i><span class="text-gray-400">Requests: <span class="text-white font-semibold" x-text="fmt(selectedEndpoint.total_requests)"></span></span></span>
+                                    <span class="flex items-center space-x-1.5 px-2.5 py-1 bg-white/5 rounded-full"><i data-lucide="clock" class="w-3 h-3 text-violet-400"></i><span class="text-gray-400">Avg latency: <span :class="selectedEndpoint.avg_latency_ms>500?'text-orange-400':'text-white'" class="font-semibold" x-text="selectedEndpoint.avg_latency_ms.toFixed(1)+'ms'"></span></span></span>
+                                    <span class="flex items-center space-x-1.5 px-2.5 py-1 bg-white/5 rounded-full"><i data-lucide="x-circle" class="w-3 h-3 text-red-400"></i><span class="text-gray-400">Errors: <span :class="selectedEndpoint.error_count>0?'text-red-400':'text-green-400'" class="font-semibold" x-text="selectedEndpoint.error_count"></span></span></span>
+                                    <span x-show="selectedEndpoint.has_drift" class="flex items-center space-x-1.5 px-2.5 py-1 bg-orange-500/10 border border-orange-500/20 rounded-full text-orange-400 font-semibold"><i data-lucide="alert-triangle" class="w-3 h-3"></i><span>Drift Detected</span></span>
+                                </div>
+                                <!-- View toggle -->
+                                <div class="flex p-1 bg-black/30 rounded-lg mt-4 border border-white/5 w-fit">
+                                    <button @click="docsViewMode='api'" :class="docsViewMode==='api'?'bg-white/10 text-white shadow-sm':'text-gray-400 hover:text-white'" class="px-4 py-1.5 text-xs font-medium rounded-md transition-colors">API Reference</button>
+                                    <button @click="docsViewMode='readme'" :class="docsViewMode==='readme'?'bg-white/10 text-white shadow-sm':'text-gray-400 hover:text-white'" class="px-4 py-1.5 text-xs font-medium rounded-md transition-colors">Generated README</button>
+                                </div>
+                            </div>
+
+                            <!-- API Reference view -->
+                            <div x-show="docsViewMode === 'api'" class="flex-1 overflow-y-auto p-6 space-y-6">
+                                <!-- AI docs -->
+                                <div x-show="selectedEndpoint.ai_documentation">
+                                    <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">AI Documentation</h4>
+                                    <div class="bg-surface rounded-xl border border-border p-5 text-sm text-gray-300 leading-relaxed" x-text="selectedEndpoint.ai_documentation"></div>
+                                </div>
+                                <!-- No docs -->
+                                <div x-show="!selectedEndpoint.ai_documentation" class="bg-violet-500/5 border border-violet-500/20 rounded-xl p-5 flex items-start space-x-4">
+                                    <div class="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center flex-shrink-0"><i data-lucide="cpu" class="w-5 h-5 text-violet-400"></i></div>
+                                    <div><p class="text-sm text-white font-semibold mb-1">No AI documentation yet</p><p class="text-xs text-gray-400">Click "Re-analyze" to run the LangGraph pipeline on this endpoint's real traffic. Results appear in ~30 seconds.</p></div>
+                                </div>
+                                <!-- Drift -->
+                                <div x-show="selectedEndpoint.has_drift && selectedEndpoint.drift_summary" class="rounded-xl border border-orange-500/30 bg-orange-500/5 p-5 relative overflow-hidden">
+                                    <div class="absolute left-0 top-0 bottom-0 w-1 bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]"></div>
+                                    <div class="flex items-start pl-4"><i data-lucide="alert-triangle" class="w-5 h-5 text-orange-400 mr-3 flex-shrink-0 mt-0.5"></i><div><p class="text-sm font-semibold text-orange-400 mb-1">Behavioral Drift Detected</p><p class="text-sm text-gray-300" x-text="selectedEndpoint.drift_summary"></p></div></div>
+                                </div>
+                                <!-- Edge cases -->
+                                <div x-show="selectedEndpoint.edge_cases && selectedEndpoint.edge_cases.length > 0">
+                                    <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Detected Edge Cases</h4>
+                                    <div class="space-y-2">
+                                        <template x-for="(ec,i) in selectedEndpoint.edge_cases" :key="i">
+                                            <div class="flex items-start space-x-3 bg-yellow-500/5 border border-yellow-500/20 rounded-lg px-4 py-3">
+                                                <span class="text-yellow-400 flex-shrink-0 mt-0.5">⚠</span>
+                                                <span class="text-sm text-gray-300" x-text="ec"></span>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </div>
+                                <!-- Usage examples -->
+                                <div x-show="selectedEndpoint.usage_examples && selectedEndpoint.usage_examples.length > 0">
+                                    <h4 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Real Usage Examples</h4>
+                                    <template x-for="(ex,i) in selectedEndpoint.usage_examples" :key="i">
+                                        <div class="code-block rounded-xl p-4 font-mono text-xs text-gray-300 mb-3">
+                                            <p class="text-gray-500 mb-2 font-sans" x-text="ex.description||'Example '+(i+1)"></p>
+                                            <div x-show="ex.request" class="flex items-center space-x-2">
+                                                <span :class="methodColor(ex.request?.method||'GET')" class="font-bold uppercase" x-text="ex.request?.method"></span>
+                                                <span x-text="ex.request?.path"></span>
+                                            </div>
+                                            <div x-show="ex.response" class="mt-2 text-gray-500">→ <span :class="statusColor(ex.response?.status)" class="font-bold" x-text="ex.response?.status"></span></div>
+                                        </div>
+                                    </template>
+                                </div>
+                                <p x-show="selectedEndpoint.docs_updated_at" class="text-[11px] text-gray-600 flex items-center space-x-1"><i data-lucide="clock" class="w-3 h-3"></i><span x-text="'Last analyzed '+timeAgo(selectedEndpoint.docs_updated_at)"></span></p>
+                            </div>
+
+                            <!-- README view — always shows, uses whatever data is available -->
+                            <div x-show="docsViewMode === 'readme'" class="flex-1 overflow-y-auto p-8 bg-surface">
+                                <div class="max-w-3xl mx-auto">
+
+                                    <!-- Header -->
+                                    <div class="flex items-center justify-between mb-8 pb-4 border-b border-white/10">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center border border-blue-500/30">
+                                                <i data-lucide="book-open" class="w-5 h-5 text-blue-400"></i>
+                                            </div>
+                                            <div>
+                                                <h1 class="text-xl font-bold text-white font-mono" x-text="selectedEndpoint.method + ' ' + selectedEndpoint.path_pattern"></h1>
+                                                <p class="text-xs text-gray-500 mt-0.5">Auto-generated by LiveDocAI</p>
+                                            </div>
+                                        </div>
+                                        <!-- AI docs badge -->
+                                        <div x-show="selectedEndpoint.ai_documentation" class="flex items-center space-x-1.5 px-3 py-1 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 text-xs">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse"></span>
+                                            <span>AI Generated</span>
+                                        </div>
+                                        <div x-show="!selectedEndpoint.ai_documentation" class="flex items-center space-x-1.5 px-3 py-1 rounded-full border border-gray-500/30 bg-gray-500/10 text-gray-500 text-xs">
+                                            <span>No AI docs yet</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Overview — shows AI docs if available, else a hint -->
+                                    <h2 class="text-base font-semibold text-white mb-3">Overview</h2>
+                                    <div x-show="selectedEndpoint.ai_documentation" class="bg-[#0b0b0f] rounded-lg border border-white/5 p-4 text-sm text-gray-300 leading-relaxed mb-6" x-text="selectedEndpoint.ai_documentation"></div>
+                                    <div x-show="!selectedEndpoint.ai_documentation" class="bg-violet-500/5 border border-violet-500/20 rounded-lg p-4 mb-6 flex items-start space-x-3">
+                                        <i data-lucide="cpu" class="w-4 h-4 text-violet-400 flex-shrink-0 mt-0.5"></i>
+                                        <div>
+                                            <p class="text-sm text-gray-300 font-medium">AI documentation not generated yet</p>
+                                            <p class="text-xs text-gray-500 mt-1">Switch to <button @click="docsViewMode='api'" class="text-blue-400 hover:underline">API Reference</button> and click "Re-analyze" to generate docs from real traffic.</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Performance — always available from real DB data -->
+                                    <h2 class="text-base font-semibold text-white mb-3">Performance Metrics</h2>
+                                    <div class="grid grid-cols-3 gap-4 mb-6">
+                                        <div class="bg-[#0b0b0f] rounded-lg p-4 border border-white/5 text-center">
+                                            <p class="text-xs text-gray-500 mb-1">Total Requests</p>
+                                            <p class="text-xl font-bold text-white" x-text="fmt(selectedEndpoint.total_requests)"></p>
+                                        </div>
+                                        <div class="bg-[#0b0b0f] rounded-lg p-4 border border-white/5 text-center">
+                                            <p class="text-xs text-gray-500 mb-1">Avg Latency</p>
+                                            <p class="text-xl font-bold" :class="selectedEndpoint.avg_latency_ms > 500 ? 'text-orange-400' : 'text-white'" x-text="selectedEndpoint.avg_latency_ms.toFixed(0) + 'ms'"></p>
+                                        </div>
+                                        <div class="bg-[#0b0b0f] rounded-lg p-4 border border-white/5 text-center">
+                                            <p class="text-xs text-gray-500 mb-1">Error Count</p>
+                                            <p class="text-xl font-bold" :class="selectedEndpoint.error_count > 0 ? 'text-red-400' : 'text-green-400'" x-text="selectedEndpoint.error_count"></p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Drift — always available -->
+                                    <div x-show="selectedEndpoint.has_drift && selectedEndpoint.drift_summary" class="mb-6 rounded-lg border border-orange-500/30 bg-orange-500/5 p-4 flex items-start space-x-3">
+                                        <i data-lucide="alert-triangle" class="w-4 h-4 text-orange-400 flex-shrink-0 mt-0.5"></i>
+                                        <div>
+                                            <p class="text-sm font-semibold text-orange-400 mb-1">Behavioral Drift Detected</p>
+                                            <p class="text-xs text-gray-400" x-text="selectedEndpoint.drift_summary"></p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Edge cases — always available if AI ran -->
+                                    <div x-show="selectedEndpoint.edge_cases && selectedEndpoint.edge_cases.length > 0" class="mb-6">
+                                        <h2 class="text-base font-semibold text-white mb-3">Known Edge Cases</h2>
+                                        <ul class="space-y-2 text-sm text-gray-400">
+                                            <template x-for="(ec, i) in selectedEndpoint.edge_cases" :key="i">
+                                                <li class="flex items-start space-x-2">
+                                                    <span class="text-yellow-400 flex-shrink-0 mt-0.5">⚠</span>
+                                                    <span x-text="ec"></span>
+                                                </li>
+                                            </template>
+                                        </ul>
+                                    </div>
+
+                                    <!-- Usage examples — always available if AI ran -->
+                                    <div x-show="selectedEndpoint.usage_examples && selectedEndpoint.usage_examples.length > 0" class="mb-6">
+                                        <h2 class="text-base font-semibold text-white mb-3">Usage Examples</h2>
+                                        <template x-for="(ex, i) in selectedEndpoint.usage_examples" :key="i">
+                                            <div class="code-block rounded-lg p-4 font-mono text-xs text-gray-300 mb-3">
+                                                <p class="text-gray-500 font-sans mb-2" x-text="ex.description || 'Example ' + (i+1)"></p>
+                                                <div x-show="ex.request" class="flex items-center space-x-2">
+                                                    <span :class="methodColor(ex.request?.method||'GET')" class="font-bold uppercase" x-text="ex.request?.method"></span>
+                                                    <span x-text="ex.request?.path"></span>
+                                                </div>
+                                                <div x-show="ex.response" class="mt-1 text-gray-500">→ <span :class="statusColor(ex.response?.status)" class="font-bold" x-text="ex.response?.status"></span></div>
+                                            </div>
+                                        </template>
+                                    </div>
+
+                                    <!-- Footer -->
+                                    <p class="text-xs text-gray-600 mt-8 pt-4 border-t border-white/5 flex items-center space-x-1">
+                                        <i data-lucide="clock" class="w-3 h-3"></i>
+                                        <span x-text="selectedEndpoint.docs_updated_at ? 'Last analyzed ' + timeAgo(selectedEndpoint.docs_updated_at) : 'Not yet analyzed — click Re-analyze to generate AI docs'"></span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Agent feed -->
+                <div class="w-80 flex-shrink-0 glass rounded-xl border border-border flex flex-col overflow-hidden">
+                    <div class="p-4 border-b border-border flex items-center space-x-2 bg-surface flex-shrink-0">
+                        <i data-lucide="radio" class="w-4 h-4 text-blue-400"></i>
+                        <h3 class="text-sm font-semibold text-white">AI Agent Feed</h3>
+                        <span class="ml-auto flex items-center space-x-1.5 text-xs text-green-400"><span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span><span>Live</span></span>
+                    </div>
+                    <div class="flex-1 overflow-y-auto p-4 space-y-3">
+                        <template x-for="(event, idx) in agentEvents" :key="idx">
+                            <div class="bg-surface p-3 rounded-lg border border-border text-xs animate-slide-in">
+                                <div class="flex items-center space-x-2 mb-1.5">
+                                    <div :class="event.color" class="w-2 h-2 rounded-full flex-shrink-0"></div>
+                                    <span class="font-semibold text-gray-300 truncate" x-text="event.title"></span>
+                                    <span class="text-gray-600 ml-auto text-[10px] whitespace-nowrap" x-text="event.time"></span>
+                                </div>
+                                <p class="text-gray-400 font-mono text-[10px] leading-relaxed" x-html="event.desc"></p>
+                            </div>
+                        </template>
+                        <div x-show="agentEvents.length === 0" class="flex flex-col items-center justify-center h-32 text-center">
+                            <i data-lucide="radio" class="w-6 h-6 text-gray-600 mb-2"></i>
+                            <p class="text-gray-600 text-xs">Waiting for AI events…</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── API INTELLIGENCE ── -->
+            <div x-show="dashTab === 'intelligence'" class="tab-content max-w-5xl space-y-6">
+                <div>
+                    <h2 class="text-xl font-bold text-white mb-1">API Intelligence</h2>
+                    <p class="text-gray-400 text-sm">AI-detected drift between your code and documentation — based on real commit diffs.</p>
+                </div>
+
+                <!-- Drift events from doc history -->
+                <div x-show="github.history.filter(h=>h.drift_detected==='YES').length > 0">
+                    <div class="flex items-center space-x-3 mb-4">
+                        <h3 class="text-sm font-semibold text-white">Drift Detected</h3>
+                        <span class="text-xs bg-orange-500/20 text-orange-400 border border-orange-500/30 px-2 py-0.5 rounded-full font-bold"
+                              x-text="github.history.filter(h=>h.drift_detected==='YES').length"></span>
+                    </div>
+                    <div class="space-y-4">
+                        <template x-for="item in github.history.filter(h=>h.drift_detected==='YES')" :key="item.id">
+                            <div class="rounded-xl border border-orange-500/30 bg-orange-500/5 p-5 relative overflow-hidden">
+                                <div class="absolute left-0 top-0 bottom-0 w-1 bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.8)]"></div>
+                                <div class="flex items-start pl-4">
+                                    <div class="p-2 rounded-full bg-orange-500/10 mr-4 flex-shrink-0"><i data-lucide="alert-triangle" class="w-5 h-5 text-orange-400"></i></div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="flex items-center space-x-3 mb-2">
+                                            <span class="font-mono text-white font-semibold" x-text="item.owner+'/'+item.repo"></span>
+                                            <span class="text-xs text-gray-500" x-text="timeAgo(item.created_at)"></span>
+                                        </div>
+                                        <p class="text-sm text-gray-300 mb-3" x-text="item.drift_summary || 'Documentation was out of sync with latest code changes.'"></p>
+                                        <div class="flex items-center space-x-4 text-xs text-gray-500 mb-3">
+                                            <span x-show="item.commit_sha" class="font-mono" x-text="'commit: '+item.commit_sha?.slice(0,7)"></span>
+                                            <span x-text="'File: '+item.file_path"></span>
+                                        </div>
+                                        <a x-show="item.pr_url" :href="item.pr_url" target="_blank"
+                                           class="inline-flex items-center space-x-2 px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs font-semibold rounded-lg transition-colors">
+                                            <i data-lucide="git-pull-request" class="w-3.5 h-3.5"></i>
+                                            <span>View PR #<span x-text="item.pr_number"></span></span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- All clear -->
+                <div x-show="github.history.filter(h=>h.drift_detected==='YES').length === 0 && github.history.length > 0"
+                     class="rounded-xl border border-green-500/20 bg-green-500/5 p-6 flex items-center space-x-4">
+                    <div class="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0"><i data-lucide="check-circle" class="w-6 h-6 text-green-400"></i></div>
+                    <div><p class="text-white font-semibold text-lg">All Clear</p><p class="text-gray-400 text-sm">No drift detected — your documentation is in sync with your code.</p></div>
+                </div>
+
+                <!-- No history yet -->
+                <div x-show="github.history.length === 0" class="rounded-xl border border-border p-12 flex flex-col items-center text-center">
+                    <div class="w-16 h-16 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center mb-4">
+                        <i data-lucide="brain" class="w-8 h-8 text-violet-400"></i>
+                    </div>
+                    <h3 class="text-white font-semibold text-lg mb-2">No Analysis Yet</h3>
+                    <p class="text-gray-500 text-sm max-w-sm mb-4">Connect a GitHub repo and generate documentation. LiveDocAI will automatically detect drift between your code and docs on every generation.</p>
+                    <button @click="dashTab='github'" class="px-4 py-2 bg-violet-500/10 border border-violet-500/20 text-violet-400 text-sm rounded-lg hover:bg-violet-500/20 transition-colors">
+                        Go to GitHub Integration →
+                    </button>
+                </div>
+
+                <!-- How drift detection works -->
+                <div class="glass rounded-xl p-5 border border-white/5">
+                    <h3 class="text-sm font-semibold text-white mb-4 flex items-center space-x-2">
+                        <i data-lucide="info" class="w-4 h-4 text-blue-400"></i>
+                        <span>How Drift Detection Works</span>
+                    </h3>
+                    <div class="grid md:grid-cols-3 gap-4 text-xs text-gray-400">
+                        <div class="flex items-start space-x-2">
+                            <span class="text-blue-400 font-bold flex-shrink-0">1.</span>
+                            <p><span class="text-white font-medium">Code diff analysis</span> — compares latest commit with previous to see what changed</p>
+                        </div>
+                        <div class="flex items-start space-x-2">
+                            <span class="text-violet-400 font-bold flex-shrink-0">2.</span>
+                            <p><span class="text-white font-medium">Docs comparison</span> — checks if existing README/docs still accurately describe the new code</p>
+                        </div>
+                        <div class="flex items-start space-x-2">
+                            <span class="text-orange-400 font-bold flex-shrink-0">3.</span>
+                            <p><span class="text-white font-medium">Auto PR</span> — when drift found, generates updated docs and opens a PR automatically</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── GITHUB INTEGRATION ── -->
+            <div x-show="dashTab === 'github'" class="tab-content max-w-4xl mx-auto pt-2">
+
+                <!-- Not connected -->
+                <div x-show="!github.connected" class="glass-card rounded-2xl p-10 text-center relative overflow-hidden mb-8 border border-border">
+                    <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PGRlZnM+PHBhdHRlcm4gaWQ9ImciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTTAgMGg0MHY0MEgweiIgZmlsbD0ibm9uZSIvPjxjaXJjbGUgY3g9IjEiIGN5PSIxIiByPSIxIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDUpIi8+PC9wYXR0ZXJuPjwvZGVmcz48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSJ1cmwoI2cpIi8+PC9zdmc+')] opacity-50 z-0"></div>
+                    <div class="absolute inset-0 bg-gradient-to-t from-surface to-transparent z-0"></div>
+                    <div class="relative z-10">
+                        <div class="flex justify-center items-center space-x-6 mb-8">
+                            <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-lg">
+                                <i data-lucide="zap" class="w-8 h-8 text-white"></i>
+                            </div>
+                            <div class="w-8 flex items-center overflow-hidden">
+                                <div class="w-full h-0.5 bg-gray-600 relative">
+                                    <div class="absolute left-0 top-0 h-full bg-blue-500 w-full animate-pulse"></div>
+                                </div>
+                            </div>
+                            <div class="w-16 h-16 rounded-2xl bg-[#24292e] border border-gray-700 flex items-center justify-center shadow-lg">
+                                <i data-lucide="github" class="w-8 h-8 text-white"></i>
+                            </div>
+                        </div>
+                        <h2 class="text-2xl font-bold text-white mb-3">Connect GitHub Repository</h2>
+                        <p class="text-gray-400 mb-8 max-w-lg mx-auto">Link your repo to allow LiveDoc AI to read your source code, detect documentation drift, and open pull requests when changes are detected.</p>
+
+                        <!-- Error -->
+                        <div x-show="github.error" class="mb-6 px-4 py-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm flex items-center space-x-2 max-w-md mx-auto">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <span x-text="github.error"></span>
+                        </div>
+
+                        <!-- Connect form -->
+                        <div class="max-w-md mx-auto space-y-4 text-left">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-400 mb-1.5">Repository URL</label>
+                                <input x-model="github.repoUrl" type="text"
+                                    placeholder="https://github.com/username/repo-name"
+                                    class="w-full bg-[#0d0d12] border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-gray-600 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-400 mb-1.5">
+                                    Personal Access Token
+                                    <span class="text-gray-500 font-normal ml-1">(required for PRs — needs <code class="text-blue-300 bg-blue-500/10 px-1 rounded">repo</code> scope)</span>
+                                </label>
+                                <input x-model="github.token" type="password"
+                                    placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                                    class="w-full bg-[#0d0d12] border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-gray-600 text-sm">
+                                <p class="text-xs text-gray-300 mt-1.5">Generate at <a href="https://github.com/settings/tokens/new" target="_blank" class="text-blue-400 hover:underline">github.com/settings/tokens</a> — check <code class="text-blue-300 bg-blue-500/10 px-1 rounded">repo</code> scope</p>
+                            </div>
+                            <button @click="connectGithub()" :disabled="github.connecting"
+                                class="w-full py-3 bg-white text-black font-semibold rounded-lg hover:bg-gray-200 transition-all shadow-[0_0_20px_rgba(255,255,255,0.15)] flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <svg x-show="github.connecting" class="animate-spin w-4 h-4 text-black" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                <i x-show="!github.connecting" data-lucide="github" class="w-5 h-5"></i>
+                                <span x-text="github.connecting ? 'Connecting...' : 'Connect Repository'"></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Connected state -->
+                <div x-show="github.connected && github.repoInfo">
+
+                    <!-- Repo info card -->
+                    <div class="glass rounded-xl border border-border p-6 mb-6">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-start space-x-4">
+                                <div class="w-12 h-12 rounded-xl bg-[#24292e] border border-gray-700 flex items-center justify-center flex-shrink-0">
+                                    <i data-lucide="github" class="w-6 h-6 text-white"></i>
+                                </div>
+                                <div>
+                                    <div class="flex items-center space-x-2 mb-1">
+                                        <h3 class="text-white font-semibold text-lg" x-text="github.repoInfo?.full_name"></h3>
+                                        <span x-show="github.repoInfo?.private" class="text-[10px] bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-2 py-0.5 rounded-full">Private</span>
+                                        <span x-show="!github.repoInfo?.private" class="text-[10px] bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded-full">Public</span>
+                                    </div>
+                                    <p class="text-gray-400 text-sm" x-text="github.repoInfo?.description || 'No description'"></p>
+                                    <div class="flex items-center space-x-4 mt-2 text-xs text-gray-500">
+                                        <span class="flex items-center space-x-1"><i data-lucide="star" class="w-3 h-3"></i><span x-text="github.repoInfo?.stargazers_count + ' stars'"></span></span>
+                                        <span class="flex items-center space-x-1"><i data-lucide="git-fork" class="w-3 h-3"></i><span x-text="github.repoInfo?.forks_count + ' forks'"></span></span>
+                                        <span class="flex items-center space-x-1"><i data-lucide="circle-dot" class="w-3 h-3"></i><span x-text="github.repoInfo?.open_issues_count + ' issues'"></span></span>
+                                        <span x-show="github.repoInfo?.language" class="flex items-center space-x-1"><i data-lucide="code-2" class="w-3 h-3"></i><span x-text="github.repoInfo?.language"></span></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-3 flex-shrink-0 ml-4">
+                                <div class="flex items-center space-x-1.5 px-3 py-1.5 rounded-full border border-green-500/30 bg-green-500/10 text-green-400 text-xs font-medium">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
+                                    <span>Connected</span>
+                                </div>
+                                <a :href="github.repoInfo?.html_url" target="_blank" class="p-2 text-gray-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors" title="Open on GitHub">
+                                    <i data-lucide="external-link" class="w-4 h-4"></i>
+                                </a>
+                                <button @click="disconnectGithub()" class="p-2 text-gray-500 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors" title="Disconnect">
+                                    <i data-lucide="unlink" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent commits -->
+                    <div x-show="github.commits && github.commits.length > 0" class="mb-6">
+                        <h3 class="text-sm font-semibold text-white mb-4 px-1">Recent Commits</h3>
+                        <div class="relative border-l border-gray-700 ml-3 space-y-5 pb-4">
+                            <template x-for="(commit, i) in github.commits" :key="commit.sha">
+                                <div class="relative pl-8">
+                                    <div class="absolute w-3 h-3 rounded-full -left-1.5 top-1.5"
+                                         :class="i===0 ? 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.8)]' : 'bg-gray-600'"></div>
+                                    <div class="bg-surface p-4 rounded-xl border border-border" :class="i > 0 ? 'opacity-75' : ''">
+                                        <div class="flex justify-between items-start mb-2 flex-wrap gap-2">
+                                            <div class="flex items-center space-x-2">
+                                                <span class="font-mono text-xs text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded" x-text="commit.sha.slice(0,7)"></span>
+                                                <span class="text-sm font-semibold text-white" x-text="commit.commit.message.split('
+')[0]"></span>
+                                            </div>
+                                            <span class="text-xs text-gray-500" x-text="timeAgo(commit.commit.author.date)"></span>
+                                        </div>
+                                        <div class="flex items-center text-xs text-gray-500 mt-2">
+                                            <img :src="commit.author?.avatar_url || 'https://ui-avatars.com/api/?name='+encodeURIComponent(commit.commit.author.name)+'&background=232333&color=fff'"
+                                                 class="w-4 h-4 rounded-full mr-2">
+                                            <span x-text="commit.commit.author.name"></span>
+                                            <a :href="commit.html_url" target="_blank" class="ml-auto text-blue-400 hover:text-blue-300 flex items-center space-x-1 transition-colors">
+                                                <i data-lucide="external-link" class="w-3 h-3"></i><span>View</span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Generate Documentation Panel -->
+                    <div class="glass rounded-xl border border-border overflow-hidden">
+                        <div class="px-6 py-4 border-b border-border bg-surface/50 flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
+                                    <i data-lucide="file-text" class="w-4 h-4 text-violet-400"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-white font-semibold text-sm">Generate Documentation</h3>
+                                    <p class="text-gray-500 text-xs mt-0.5">AI reads your code + detects drift → opens a PR</p>
+                                </div>
+                            </div>
+                            <div class="text-xs text-gray-500 flex items-center space-x-1">
+                                <i data-lucide="info" class="w-3 h-3"></i>
+                                <span>Requires token with <code class="text-blue-400 bg-blue-500/10 px-1 rounded">repo</code> scope</span>
+                            </div>
+                        </div>
+
+                        <div class="p-6 space-y-5">
+                            <!-- Target selection -->
+                            <div>
+                                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Where should LiveDocAI update the docs?</p>
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                    <button @click="github.docTarget='readme'"
+                                        :class="github.docTarget==='readme' ? 'border-blue-500/60 bg-blue-500/10 text-white' : 'border-border text-gray-400 hover:border-blue-500/30'"
+                                        class="text-left p-4 rounded-xl border transition-all">
+                                        <div class="flex items-center space-x-2 mb-1"><i data-lucide="book-open" class="w-4 h-4 text-blue-400 flex-shrink-0"></i><span class="text-sm font-semibold">README.md</span></div>
+                                        <p class="text-xs text-gray-500">Update existing README in repo root</p>
+                                        <code class="text-[10px] text-blue-400 mt-1.5 block">→ README.md</code>
+                                    </button>
+                                    <button @click="github.docTarget='new'"
+                                        :class="github.docTarget==='new' ? 'border-violet-500/60 bg-violet-500/10 text-white' : 'border-border text-gray-400 hover:border-violet-500/30'"
+                                        class="text-left p-4 rounded-xl border transition-all">
+                                        <div class="flex items-center space-x-2 mb-1"><i data-lucide="file-plus" class="w-4 h-4 text-violet-400 flex-shrink-0"></i><span class="text-sm font-semibold">DOCUMENTATION.md</span></div>
+                                        <p class="text-xs text-gray-500">Create or update a dedicated doc file</p>
+                                        <code class="text-[10px] text-violet-400 mt-1.5 block">→ DOCUMENTATION.md</code>
+                                    </button>
+                                    <button @click="github.docTarget='custom'"
+                                        :class="github.docTarget==='custom' ? 'border-green-500/60 bg-green-500/10 text-white' : 'border-border text-gray-400 hover:border-green-500/30'"
+                                        class="text-left p-4 rounded-xl border transition-all">
+                                        <div class="flex items-center space-x-2 mb-1"><i data-lucide="link" class="w-4 h-4 text-green-400 flex-shrink-0"></i><span class="text-sm font-semibold">Custom Path</span></div>
+                                        <p class="text-xs text-gray-500">Any file path or GitHub URL</p>
+                                        <code class="text-[10px] text-green-400 mt-1.5 block">→ your/path/here</code>
+                                    </button>
+                                </div>
+                                <div x-show="github.docTarget === 'custom'" class="mt-3">
+                                    <input x-model="github.customDocPath" type="text"
+                                        placeholder="e.g. https://github.com/user/repo/blob/main/docs/API.md  or  docs/API.md"
+                                        class="w-full bg-[#0d0d12] border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm focus:outline-none focus:border-green-500 transition-all placeholder-gray-600">
+                                    <p class="text-xs text-gray-400 mt-1.5">Paste a full GitHub URL or file path relative to repo root</p>
+                                </div>
+                            </div>
+
+                            <!-- Token warning -->
+                            <div x-show="!github.token" class="flex items-start space-x-3 bg-yellow-500/5 border border-yellow-500/20 rounded-lg p-4">
+                                <i data-lucide="alert-triangle" class="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5"></i>
+                                <div>
+                                    <p class="text-sm text-yellow-400 font-medium">Token required to open PRs</p>
+                                    <p class="text-xs text-gray-400 mt-1">Reconnect with a token that has <code class="text-blue-300 bg-blue-500/10 px-1 rounded">repo</code> scope.</p>
+                                    <button @click="disconnectGithub()" class="text-xs text-blue-400 hover:underline mt-1.5">← Reconnect with token</button>
+                                </div>
+                            </div>
+
+                            <!-- Error -->
+                            <div x-show="github.prError" class="flex items-start space-x-3 bg-red-500/5 border border-red-500/20 rounded-lg p-4">
+                                <svg class="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                <p class="text-sm text-red-400" x-text="github.prError"></p>
+                            </div>
+
+                            <!-- PR success -->
+                            <div x-show="github.prUrl" class="flex items-start space-x-4 bg-green-500/5 border border-green-500/30 rounded-xl p-5">
+                                <div class="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-green-400 font-semibold text-sm mb-1">Pull Request Created!</p>
+                                    <p class="text-gray-400 text-xs mb-3">Your documentation has been generated. Review and merge the PR on GitHub.</p>
+                                    <a :href="github.prUrl" target="_blank"
+                                        class="inline-flex items-center space-x-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-xs font-semibold rounded-lg transition-colors">
+                                        <i data-lucide="git-pull-request" class="w-3.5 h-3.5"></i>
+                                        <span>View Pull Request on GitHub</span>
+                                        <i data-lucide="external-link" class="w-3 h-3"></i>
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Generate button -->
+                            <button @click="generateDocs()" :disabled="github.generating || !github.token"
+                                class="w-full py-3.5 rounded-xl font-semibold text-sm transition-all flex items-center justify-center space-x-3 disabled:opacity-40 disabled:cursor-not-allowed"
+                                :class="github.token ? 'bg-gradient-to-r from-blue-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-white shadow-[0_0_20px_rgba(139,92,246,0.3)]' : 'bg-gray-800 text-gray-500'">
+                                <svg x-show="github.generating" class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                <i x-show="!github.generating" data-lucide="sparkles" class="w-4 h-4"></i>
+                                <span x-text="github.generating ? 'Analyzing code + detecting drift, generating PR...' : 'Generate Documentation & Open PR'"></span>
+                            </button>
+                            <p class="text-xs text-gray-600 text-center">LiveDocAI reads your code, compares with last commit, detects drift, and opens a PR. Takes ~30–60 seconds.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Connected but loading -->
+                <div x-show="github.connected && !github.repoInfo" class="flex items-center justify-center py-16 text-gray-500">
+                    <svg class="animate-spin w-5 h-5 mr-3" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                    Loading repository info…
+                </div>
+
+            </div><!-- /github tab -->
+
+            <!-- ── ACTIVITY LOG ── -->
+            <div x-show="dashTab === 'logs'" class="tab-content space-y-4">
+                <div class="flex items-center justify-between flex-wrap gap-3">
+                    <div>
+                        <h2 class="text-xl font-bold text-white">Activity Log</h2>
+                        <p class="text-gray-500 text-sm mt-0.5">All documentation generations, PRs opened, and drift events</p>
+                    </div>
+                    <button @click="fetchGithubDashboard(); fetchLogs()" class="text-xs text-blue-400 hover:text-blue-300 flex items-center space-x-1 transition-colors">
+                        <i data-lucide="refresh-cw" class="w-3 h-3"></i><span>Refresh</span>
+                    </button>
+                </div>
+
+                <!-- Doc generation history -->
+                <div x-show="github.history.length > 0">
+                    <h3 class="text-sm font-semibold text-white mb-3">Documentation Generations</h3>
+                    <div class="glass rounded-xl border border-border overflow-hidden">
+                        <table class="w-full text-sm">
+                            <thead><tr class="border-b border-border text-[10px] text-gray-500 uppercase tracking-wider bg-surface/50">
+                                <th class="text-left px-5 py-3">Time</th>
+                                <th class="text-left px-5 py-3">Repository</th>
+                                <th class="text-left px-5 py-3">File Updated</th>
+                                <th class="text-left px-5 py-3">Drift</th>
+                                <th class="text-left px-5 py-3">Trigger</th>
+                                <th class="text-left px-5 py-3">PR</th>
+                            </tr></thead>
+                            <tbody>
+                                <template x-for="item in github.history" :key="item.id">
+                                    <tr class="border-b border-border/50 hover:bg-white/3 transition-colors">
+                                        <td class="px-5 py-3 text-gray-500 whitespace-nowrap text-xs" x-text="new Date(item.created_at).toLocaleString()"></td>
+                                        <td class="px-5 py-3">
+                                            <span class="font-mono text-white text-xs" x-text="item.owner+'/'+item.repo"></span>
+                                        </td>
+                                        <td class="px-5 py-3">
+                                            <span class="font-mono text-blue-400 text-xs" x-text="item.file_path"></span>
+                                        </td>
+                                        <td class="px-5 py-3">
+                                            <span x-show="item.drift_detected==='YES'" class="text-xs bg-orange-500/20 text-orange-400 border border-orange-500/30 px-2 py-0.5 rounded-full font-medium">Drift</span>
+                                            <span x-show="item.drift_detected==='NO'" class="text-xs bg-green-500/20 text-green-400 border border-green-500/30 px-2 py-0.5 rounded-full font-medium">Clean</span>
+                                            <span x-show="!item.drift_detected || item.drift_detected==='UNKNOWN'" class="text-xs text-gray-500">—</span>
+                                        </td>
+                                        <td class="px-5 py-3">
+                                            <span :class="item.trigger==='webhook'?'text-violet-400':'text-gray-400'" class="text-xs capitalize" x-text="item.trigger || 'manual'"></span>
+                                        </td>
+                                        <td class="px-5 py-3">
+                                            <a x-show="item.pr_url" :href="item.pr_url" target="_blank"
+                                               class="text-xs text-blue-400 hover:text-blue-300 flex items-center space-x-1">
+                                                <i data-lucide="external-link" class="w-3 h-3"></i>
+                                                <span x-text="'#'+item.pr_number"></span>
+                                            </a>
+                                            <span x-show="!item.pr_url" class="text-gray-600 text-xs">—</span>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Empty doc history -->
+                <div x-show="github.history.length === 0" class="glass rounded-xl border border-border p-10 flex flex-col items-center text-center">
+                    <i data-lucide="clock" class="w-10 h-10 text-gray-600 mb-3"></i>
+                    <p class="text-gray-500 font-medium">No activity yet</p>
+                    <p class="text-gray-600 text-sm mt-1">Connect a GitHub repo and generate documentation to see activity here.</p>
+                    <button @click="dashTab='github'" class="mt-4 text-xs text-blue-400 hover:text-blue-300 border border-blue-500/30 rounded-lg px-4 py-2 transition-colors">Connect a repo →</button>
+                </div>
+
+                <!-- Raw API logs section (collapsible) -->
+                <details class="glass rounded-xl border border-border overflow-hidden">
+                    <summary class="px-5 py-4 cursor-pointer flex items-center justify-between text-sm font-semibold text-gray-400 hover:text-white transition-colors">
+                        <span class="flex items-center space-x-2"><i data-lucide="terminal" class="w-4 h-4"></i><span>Raw API Traffic Logs</span><span class="text-xs text-gray-600 font-normal ml-2">(LiveDocAI internal — <span x-text="logs.length"></span> entries)</span></span>
+                        <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                    </summary>
+                    <div class="border-t border-border">
+                        <div class="flex items-center space-x-3 px-5 py-3 border-b border-border">
+                            <div class="flex bg-surface border border-border rounded-lg p-1">
+                                <button @click="logFilter='all'; fetchLogs()" :class="logFilter==='all'?'bg-white/10 text-white':'text-gray-500 hover:text-gray-300'" class="px-3 py-1 text-xs font-medium rounded-md transition-colors">All</button>
+                                <button @click="logFilter='errors'; fetchLogs()" :class="logFilter==='errors'?'bg-white/10 text-white':'text-gray-500 hover:text-gray-300'" class="px-3 py-1 text-xs font-medium rounded-md transition-colors">Errors</button>
+                            </div>
+                            <span class="text-xs text-gray-500" x-text="logs.length+' entries'"></span>
+                        </div>
+                        <div x-show="loading.logs" class="p-4">
+                            <template x-for="i in 5" :key="i"><div class="skeleton h-8 rounded mb-2"></div></template>
+                        </div>
+                        <div x-show="!loading.logs" class="overflow-x-auto">
+                            <table class="w-full text-xs font-mono">
+                                <thead><tr class="border-b border-border text-[10px] text-gray-500 uppercase bg-surface/50">
+                                    <th class="text-left px-4 py-2">Time</th><th class="text-left px-4 py-2">Method</th><th class="text-left px-4 py-2">Path</th><th class="text-left px-4 py-2">Status</th><th class="text-right px-4 py-2">Latency</th>
+                                </tr></thead>
+                                <tbody>
+                                    <template x-for="log in logs.slice(0,20)" :key="log.id">
+                                        <tr @click="openLogModal(log)" class="border-b border-border/40 hover:bg-white/3 cursor-pointer">
+                                            <td class="px-4 py-2 text-gray-500" x-text="new Date(log.created_at).toLocaleTimeString()"></td>
+                                            <td class="px-4 py-2"><span :class="methodColor(log.method)" class="font-bold px-1.5 py-0.5 rounded border uppercase" x-text="log.method"></span></td>
+                                            <td class="px-4 py-2 text-gray-300 max-w-xs truncate" x-text="log.path"></td>
+                                            <td class="px-4 py-2"><span :class="statusBg(log.status_code)" class="px-1.5 py-0.5 rounded border font-bold" x-text="log.status_code"></span></td>
+                                            <td class="px-4 py-2 text-right" :class="log.latency_ms>500?'text-orange-400':'text-gray-400'" x-text="log.latency_ms?log.latency_ms.toFixed(1)+'ms':'—'"></td>
+                                        </tr>
+                                    </template>
+                                    <tr x-show="logs.length===0"><td colspan="5" class="px-4 py-6 text-center text-gray-500">No logs yet.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </details>
+            </div>
+
+        </div>
+    </main>
+</div>
+
+</body>
+</html>
+
+</body>
+</html>
