@@ -10,8 +10,24 @@ jobs:
   test:
     runs-on: ubuntu-latest
     
+    # Spin up a temporary Postgres DB just for tests
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     env:
-      DATABASE_URL: "sqlite+aiosqlite:///:memory:"
+      DATABASE_URL: "postgresql+asyncpg://test_user:test_password@localhost:5432/test_db"
       SECRET_KEY: "test_secret_key"
       PORT: "8000"
 
