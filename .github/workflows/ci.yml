@@ -9,27 +9,22 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-
     # Provide dummy env vars required by app/config.py
     env:
       DATABASE_URL: sqlite+aiosqlite:///:memory:
       SECRET_KEY: test_secret_key
       PORT: 8000
-
     steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.11"
-        cache: "pip"
-        
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        
-    - name: Run tests with pytest
-      run: |
-        pytest -v
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Run tests with pytest
+        run: |
+          pytest -v
