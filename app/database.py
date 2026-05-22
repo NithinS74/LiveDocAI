@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
+from sqlalchemy import text
 from app.config import get_settings
 
 settings = get_settings()
@@ -34,8 +35,31 @@ async def create_tables():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    # Add columns that may not exist in older deployments
     async with AsyncSessionLocal() as db:
+        # Create the missing users table
+        create_users_sql = """
+        CREATE TABLE IF NOT EXISTS users (
+            id VARCHAR(36) PRIMARY KEY,
+            name VARCHAR(100),
+            org VARCHAR(100),
+            email VARCHAR(255) UNIQUE NOT NULL,
+            password VARCHAR(255),
+            token TEXT,
+            api_key VARCHAR(100),
+            github_id VARCHAR(50),
+            github_token TEXT,
+            github_username VARCHAR(100),
+            avatar_url VARCHAR(500)
+        )
+        """
+        try:
+            await db.execute(text(create_users_sql))
+            await db.commit()
+        except Exception as e:
+            print(f"Error creating users table: {e}")
+            await db.rollback()
+
+        # Add columns that may not exist in older deployments
         migrations = [
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS api_key VARCHAR(100)",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS github_id VARCHAR(50)",
@@ -47,7 +71,6 @@ async def create_tables():
         ]
         for sql in migrations:
             try:
-                from sqlalchemy import text
                 await db.execute(text(sql))
                 await db.commit()
             except Exception:
