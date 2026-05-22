@@ -654,6 +654,9 @@
                 }
 
                 try {
+                    // Create a smart fallback for the token
+                    const activeToken = this.github.token || this.currentUser?.github_token || sessionStorage.getItem('livedocai_github_token') || '';
+
                     // Step 1: Analyze code + generate docs
                     const analyzeRes = await fetch(`${API}/api/github/analyze`, {
                         method: 'POST',
@@ -661,10 +664,10 @@
                         body: JSON.stringify({
                             owner,
                             repo,
-                            token: this.github.token,
+                            token: activeToken, // <-- Fixed
                             doc_target: this.github.docTarget === 'new' ? 'documentation_md' : this.github.docTarget,
                             custom_path: this.github.customDocPath || null,
-                            user_email: this.currentUser.email || null,
+                            user_email: this.currentUser?.email || null,
                         })
                     });
                     const analyzeData = await analyzeRes.json();
@@ -680,7 +683,7 @@
                         body: JSON.stringify({
                             owner,
                             repo,
-                            token: this.github.token,
+                            token: activeToken, // <-- Fixed
                             doc_target: this.github.docTarget === 'new' ? 'documentation_md' : this.github.docTarget,
                             custom_path: this.github.customDocPath || null,
                             generated_docs: analyzeData.generated_docs,
@@ -688,7 +691,7 @@
                             drift_detected: analyzeData.drift_detected || 'UNKNOWN',
                             drift_summary: analyzeData.drift_summary || null,
                             commit_sha: analyzeData.commit_sha || null,
-                            user_email: this.currentUser.email || null,
+                            user_email: this.currentUser?.email || null,
                         })
                     });
                     const prData = await prRes.json();
@@ -1863,9 +1866,6 @@
         </div>
     </main>
 </div>
-
-</body>
-</html>
 
 </body>
 </html>
