@@ -61,6 +61,7 @@ async def create_tables():
 
         # Add columns that may not exist in older deployments
         migrations = [
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS token TEXT", # <-- FIX: explicitly add the token column
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS api_key VARCHAR(100)",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS github_id VARCHAR(50)",
             "ALTER TABLE users ADD COLUMN IF NOT EXISTS github_token TEXT",
