@@ -1,6 +1,7 @@
 """
 LiveDocAI — Main Application Entry Point
 """
+# trigger deploy
 
 import asyncio
 import logging
@@ -225,3 +226,4 @@ async def root():
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
+
